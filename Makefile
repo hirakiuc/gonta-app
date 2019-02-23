@@ -3,14 +3,14 @@
 default: build
 
 build:
-	go build cmd/main.go
+	go build cmd/gonta.go
 
 run: build
-	go run main.go
+	go run gonta.go
 
 check:
 	go vet . ./internal/bot ./internal/slack ./internal/logger ./internal/plugin
-	golint ./main.go ./internal/slack/*.go ./internal/logger/*.go ./internal/plugin/*.go
+	golint ./gonta.go ./internal/slack/*.go ./internal/logger/*.go ./internal/plugin/*.go
 
 clean:
 	go clean
