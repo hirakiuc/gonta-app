@@ -14,6 +14,7 @@ check:
 
 clean:
 	go clean
+	rm -f ./gonta
 
 vendor:
 	go mod vendor
