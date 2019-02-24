@@ -3,10 +3,10 @@ package main
 import (
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/handler"
+	app "github.com/hirakiuc/gonta-app"
 )
 
 func main() {
-	http.HandleFunc("/serve", handler.Serve)
+	http.HandleFunc("/serve", app.Serve)
 	http.ListenAndServe(":8082", nil)
 }

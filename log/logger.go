@@ -29,7 +29,7 @@ func GetLogger() *zap.Logger {
 	logger, err := config.Build()
 	if err != nil {
 		// Fatal error
-		fmt.Fprintf(os.Stdout, "Failed to create logger.")
+		fmt.Fprintf(os.Stderr, "Failed to create logger.")
 		os.Exit(1)
 	}
 

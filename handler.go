@@ -1,4 +1,4 @@
-package handler
+package gonta
 
 import (
 	"encoding/json"
