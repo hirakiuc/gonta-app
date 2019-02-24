@@ -6,7 +6,7 @@ build:
 	go build cmd/gonta.go
 
 run: build
-	go run gonta.go
+	go run cmd/gonta.go
 
 check:
 	go vet . ./internal/bot ./internal/slack ./internal/logger ./internal/plugin
@@ -19,4 +19,4 @@ vendor:
 	go mod vendor
 
 deploy:
-	gcloud functions deploy gonta --entry-point Hello --runtime go111 --trigger-http --project ${GCP_PROJECT}
+	gcloud functions deploy gonta --entry-point Serve --runtime go111 --trigger-http --project ${GCP_PROJECT} --env-vars-file ./env.yaml
