@@ -74,6 +74,8 @@ func parseBody(r *http.Request) (*SlackEvent, error) {
 		return nil, err
 	}
 
+	log.Debug("Received body", zap.String("body", jsonStr))
+
 	var msg SlackEvent
 	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
 		log.Error("Failed to decode json message from slack", zap.String("json", jsonStr))

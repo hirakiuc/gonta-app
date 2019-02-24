@@ -10,7 +10,7 @@ import (
 
 var logger *zap.Logger
 
-// NewLogger return a zap.Logger instance.
+// GetLogger return a zap.Logger instance.
 func GetLogger() *zap.Logger {
 	if logger != nil {
 		return logger
@@ -20,8 +20,20 @@ func GetLogger() *zap.Logger {
 	level.SetLevel(zapcore.DebugLevel)
 
 	config := zap.Config{
-		Level:            level,
-		Encoding:         "json",
+		Level:    level,
+		Encoding: "json",
+		EncoderConfig: zapcore.EncoderConfig{
+			TimeKey:        "Time",
+			LevelKey:       "Level",
+			NameKey:        "Name",
+			CallerKey:      "Caller",
+			MessageKey:     "Msg",
+			StacktraceKey:  "StackTrace",
+			EncodeLevel:    zapcore.CapitalLevelEncoder,
+			EncodeTime:     zapcore.ISO8601TimeEncoder,
+			EncodeDuration: zapcore.StringDurationEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+		},
 		OutputPaths:      []string{"stdout"},
 		ErrorOutputPaths: []string{"stderr"},
 	}
