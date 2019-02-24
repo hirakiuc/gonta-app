@@ -9,8 +9,8 @@ run: build
 	go run cmd/gonta.go
 
 check:
-	go vet . ./internal/bot ./internal/slack ./internal/logger ./internal/plugin
-	golint ./gonta.go ./internal/slack/*.go ./internal/logger/*.go ./internal/plugin/*.go
+	go vet . ./log ./cmd
+	golint ./*.go ./cmd/gonta.go ./log/*.go
 
 clean:
 	go clean
