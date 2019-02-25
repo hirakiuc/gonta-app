@@ -17,7 +17,7 @@ type SlackEvent struct {
 	// Challenge is a token which sent from slack on url_verification event.
 	Challenge string `json:"challenge"`
 
-	slack.AttachmentActionCallback
+	slack.InteractionCallback
 }
 
 type challengeResponse struct {
