@@ -1,28 +1,16 @@
 package gonta
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 
+	"github.com/hirakiuc/gonta-app/event"
 	"github.com/hirakiuc/gonta-app/log"
-	"github.com/nlopes/slack"
+	"github.com/hirakiuc/gonta-app/reply"
 	"go.uber.org/zap"
 )
-
-// SlackEvent describe a event which sent from slack
-type SlackEvent struct {
-	// Challenge is a token which sent from slack on url_verification event.
-	Challenge string `json:"challenge"`
-
-	slack.InteractionCallback
-}
-
-type challengeResponse struct {
-	Challenge string `json:"challenge"`
-}
 
 // Serve handles the http request.
 func Serve(w http.ResponseWriter, r *http.Request) {
@@ -36,72 +24,83 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg, err := parseBody(r)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if msg.Type == "url_verification" {
-		respondChallenge(w, msg)
-		return
-	}
-
-	// Only accept message from salck with valid token
-	if msg.Token != getVerificationToken() {
-		log.Debug("Invalid verification token", zap.String("verification token", msg.Token))
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-
-	return
-}
-
-func parseBody(r *http.Request) (*SlackEvent, error) {
-	log := log.GetLogger()
-
 	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Error("Failed to read request body", zap.Error(err))
-		return nil, err
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	jsonStr, err := url.QueryUnescape(string(buf))
 	if err != nil {
 		log.Error("Failed to unescape request body", zap.Error(err))
-		return nil, err
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-
 	log.Debug("Received body", zap.String("body", jsonStr))
 
-	var msg SlackEvent
-	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
-		log.Error("Failed to decode json message from slack", zap.String("json", jsonStr))
-		return nil, err
+	parser := event.NewParser()
+	// Only accept message from salck with valid token
+	token, err := parser.GetToken()
+	if err != nil {
+		log.Error("Failed to extract token from the event", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if *token != getVerificationToken() {
+		log.Debug("Invalid verification token", zap.String("verification token", token))
+		w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
 
-	return &msg, nil
+	eventType, err := parser.GetType(jsonStr)
+	if err != nil {
+		log.Error("Failed to parse the type", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	switch eventType {
+	case "url_verification":
+		e, err := parser.ParseURLVerificationEvent(jsonStr)
+		if err != nil {
+			log.Error("Failed to parse the URLVerificationEvent", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		replyer := reply.NewUrlVerificationReplyer()
+		replyer.Reply(w)
+
+		// Reply NewUrlVerificationReplyer
+	default:
+		e, err := parser.ParseCallbackEvent(jsonStr)
+		if err != nil {
+			log.Error("Failed to parse the CallbackEvent", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Reply
+		replyer := reply.NewBeerSelectReply()
+		replyer.Reply(w, e)
+	}
+
+	replyer := getReplyer(evt)
+	replyer.Reply(evt)
 }
 
 func getVerificationToken() string {
 	return os.Getenv("VERIFICATION_TOKEN")
 }
 
-func respondChallenge(w http.ResponseWriter, msg *SlackEvent) {
-	log := log.GetLogger()
-
-	challenge := challengeResponse{Challenge: msg.Challenge}
-
-	res, err := json.Marshal(challenge)
-	if err != nil {
-		log.Error("Failed to marshal json response", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+func getReplyer(msg *event.SlackEvent) *reply.Replyer {
+	switch msg.Type {
+	case "app_mention":
+		return reply.NewBeerSelectReply()
+	case "url_verification":
+		return reply.NewUrlVerificationReplyer()
+	default:
+		return reply.NewEmptyReplyer()
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
 }
