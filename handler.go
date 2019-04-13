@@ -41,14 +41,14 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 
 	parser := event.NewParser()
 	// Only accept message from salck with valid token
-	token, err := parser.GetToken()
+	token, err := parser.GetToken(jsonStr)
 	if err != nil {
-		log.Error("Failed to extract token from the event", err)
+		log.Error("Failed to extract token from the event", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if *token != getVerificationToken() {
-		log.Debug("Invalid verification token", zap.String("verification token", token))
+		log.Debug("Invalid verification token", zap.String("verification token", *token))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -60,7 +60,7 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch eventType {
+	switch *eventType {
 	case "url_verification":
 		e, err := parser.ParseURLVerificationEvent(jsonStr)
 		if err != nil {
@@ -69,8 +69,8 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		replyer := reply.NewUrlVerificationReplyer()
-		replyer.Reply(w)
+		replyer := reply.NewURLVerificationReplyer()
+		replyer.Reply(w, e)
 
 		// Reply NewUrlVerificationReplyer
 	default:
@@ -82,25 +82,11 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Reply
-		replyer := reply.NewBeerSelectReply()
+		replyer := reply.NewBeerSelectReplyer()
 		replyer.Reply(w, e)
 	}
-
-	replyer := getReplyer(evt)
-	replyer.Reply(evt)
 }
 
 func getVerificationToken() string {
 	return os.Getenv("VERIFICATION_TOKEN")
-}
-
-func getReplyer(msg *event.SlackEvent) *reply.Replyer {
-	switch msg.Type {
-	case "app_mention":
-		return reply.NewBeerSelectReply()
-	case "url_verification":
-		return reply.NewUrlVerificationReplyer()
-	default:
-		return reply.NewEmptyReplyer()
-	}
 }

@@ -1,6 +1,7 @@
 package event
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 
@@ -59,4 +60,27 @@ func (p *Parser) ParseURLVerificationEvent(jsonStr string) (*URLVerificationEven
 	}
 
 	return &e, nil
+}
+
+// GetEventType extract the type value in the event json.
+func (e *CallbackEvent) GetEventType() (*string, error) {
+	reader := bytes.NewReader(e.Event)
+
+	var token string
+	err := scan.ScanJSON(reader, "/type", &token)
+	if err != nil {
+		return nil, err
+	}
+
+	return &token, nil
+}
+
+// ParseAppMentionEvent parse the event as a AppMentionEvent.
+func (e *CallbackEvent) ParseAppMentionEvent() (*AppMentionEvent, error) {
+	v := AppMentionEvent{}
+	if err := json.Unmarshal(e.Event, &v); err != nil {
+		return nil, err
+	}
+
+	return &v, nil
 }
