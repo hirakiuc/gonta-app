@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/hirakiuc/gonta-app/event"
+	"github.com/hirakiuc/gonta-app/log"
 )
 
 const (
@@ -22,6 +23,9 @@ func NewBeerSelectReplyer() *BeerSelectReplyer {
 
 // Reply send a beer select reply to the slack channel
 func (req *BeerSelectReplyer) Reply(w http.ResponseWriter, msg *event.CallbackEvent) {
+	logger := log.GetLogger()
+	logger.Debug("BaseSelectReplyer reply:empty")
+	w.WriteHeader(http.StatusOK)
 	/*
 		client, err := GetClient()
 		if err != nil {
