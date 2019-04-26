@@ -82,7 +82,7 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Reply
-		replyer := reply.NewBeerSelectReplyer()
+		replyer := reply.NewMentionReplyer()
 		replyer.Reply(w, e)
 	}
 }

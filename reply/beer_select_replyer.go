@@ -13,10 +13,10 @@ const (
 	actionCancel = "cancel"
 )
 
-// BeerSelectReply describe a instance of BeerSelect Request.
+// BeerSelectReplyer describe a instance of BeerSelect Request.
 type BeerSelectReplyer struct{}
 
-// NewBeerSelectReply return an BeerSelectReply instance.
+// NewBeerSelectReplyer return an BeerSelectReply instance.
 func NewBeerSelectReplyer() *BeerSelectReplyer {
 	return &BeerSelectReplyer{}
 }
