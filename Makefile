@@ -1,20 +1,23 @@
 .PHONY: build run lint clean vendor vendor vet
+TARGET := gonta
 
 default: build
 
 build:
-	go build cmd/gonta.go
+	go build -o $(TARGET) cmd/gonta/main.go
 
 run: build
-	go run cmd/gonta.go
+	go run cmd/gonta/main.go
 
 check:
-	go vet . ./log ./cmd
-	golint ./*.go ./cmd/gonta.go ./log/*.go
+	golangci-lint run --enable-all ./...
 
 clean:
-	go clean
-	rm -f ./gonta
+	go clean ./cmd/gonta/main.go
+	@rm -f $(TARGET)
+
+deps:
+	go mod download
 
 vendor:
 	go mod vendor
