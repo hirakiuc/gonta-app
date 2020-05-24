@@ -1,4 +1,4 @@
-package reply
+package handler
 
 import (
 	"net/http"
@@ -13,16 +13,16 @@ const (
 	actionCancel = "cancel"
 )
 
-// BeerSelectReplyer describe a instance of BeerSelect Request.
-type BeerSelectReplyer struct{}
+// BeerSelectHandler describe a instance of BeerSelect Request.
+type BeerSelectHandler struct{}
 
-// NewBeerSelectReplyer return an BeerSelectReply instance.
-func NewBeerSelectReplyer() *BeerSelectReplyer {
+// NewBeerSelectHandler return an BeerSelectReply instance.
+func NewBeerSelectHandler() *BeerSelectHandler {
 	return &BeerSelectReplyer{}
 }
 
-// Reply send a beer select reply to the slack channel
-func (req *BeerSelectReplyer) Reply(w http.ResponseWriter, msg *event.CallbackEvent) {
+// Handler a beer select event
+func (req *BeerSelectHandler) Handle(w http.ResponseWriter, msg *event.CallbackEvent) {
 	logger := log.GetLogger()
 	logger.Debug("BaseSelectReplyer reply:empty")
 	w.WriteHeader(http.StatusOK)

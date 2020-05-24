@@ -1,4 +1,4 @@
-package reply
+package handler
 
 import (
 	"encoding/json"
@@ -15,16 +15,16 @@ type challengeResponse struct {
 	Challenge string `json:"challenge"`
 }
 
-// URLVerificationReplyer describe a instance of URLVerification replyer.
-type URLVerificationReplyer struct{}
+// URLVerificationHandler describe a instance of URLVerification replyer.
+type URLVerificationHandler struct{}
 
-// NewURLVerificationReplyer return an URLVerificationReply instance.
-func NewURLVerificationReplyer() *URLVerificationReplyer {
-	return &URLVerificationReplyer{}
+// NewURLVerificationHandler return an URLVerificationReply instance.
+func NewURLVerificationHandler() *URLVerificationHandler {
+	return &URLVerificationHandler{}
 }
 
 // Reply send the response for the URLVerification reply.
-func (replyer *URLVerificationReplyer) Reply(w http.ResponseWriter, msg *event.URLVerificationEvent) {
+func (replyer *URLVerificationHandler) Handle(w http.ResponseWriter, msg *event.URLVerificationEvent) {
 	log := log.GetLogger()
 
 	challenge := challengeResponse{Challenge: msg.Challenge}

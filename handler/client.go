@@ -1,4 +1,4 @@
-package reply
+package handler
 
 import (
 	"github.com/hirakiuc/gonta-app/log"
