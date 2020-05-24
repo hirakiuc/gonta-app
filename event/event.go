@@ -22,14 +22,14 @@ authed_users: [
 	]
 */
 
-// URLVerificationEvent describe a url verification event
+// URLVerificationEvent describe a url verification event.
 type URLVerificationEvent struct {
 	Challenge string `json:"challenge" required:"true"`
 	Token     string `json:"token" required:"true"`
 	Type      string `json:"type" required:"true"`
 }
 
-// CallbackEvent describe a event which sent from slack
+// CallbackEvent describe a event which sent from slack.
 type CallbackEvent struct {
 	APIAppID    string          `json:"api_app_id" required:"true"`
 	AuthedUsers []string        `json:"authed_users" required:"true"`
@@ -47,9 +47,9 @@ type CallbackEvent struct {
 type AppMentionEvent struct {
 	Channel     string `json:"channel" required:"true"`
 	ClientMsgID string `json:"client_msg_id" required:"true"`
-	EventTs     string `json:"event_ts" required:"true"`
+	EventTS     string `json:"event_ts" required:"true"`
 	Text        string `json:"text" required:"true"`
-	Ts          string `json:"ts" required:"true"`
+	TS          string `json:"ts" required:"true"`
 	Type        string `json:"type" required:"true"`
 	User        string `json:"user" required:"true"`
 }
