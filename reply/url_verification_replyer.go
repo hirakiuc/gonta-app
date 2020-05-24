@@ -2,7 +2,9 @@ package reply
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/hirakiuc/gonta-app/event"
 	"github.com/hirakiuc/gonta-app/log"
@@ -31,10 +33,16 @@ func (replyer *URLVerificationReplyer) Reply(w http.ResponseWriter, msg *event.U
 	if err != nil {
 		log.Error("Failed to marshal json response", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
+
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(res)
+
+	err = json.NewEncoder(w).Encode(res)
+	if err != nil {
+		// Just log error
+		fmt.Fprintf(os.Stderr, "Failed: %s", err)
+	}
 }
