@@ -1,30 +1,34 @@
-package reply
+package handler
 
 import (
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/event"
-	"github.com/hirakiuc/gonta-app/log"
+	"github.com/hirakiuc/gonta-app/model"
 )
 
+/*
 const (
 	actionSelect = "select"
 	actionStart  = "start"
 	actionCancel = "cancel"
 )
+*/
 
-// BeerSelectReplyer describe a instance of BeerSelect Request.
-type BeerSelectReplyer struct{}
-
-// NewBeerSelectReplyer return an BeerSelectReply instance.
-func NewBeerSelectReplyer() *BeerSelectReplyer {
-	return &BeerSelectReplyer{}
+// BeerSelectHandler describe a instance of BeerSelect Request.
+type BeerSelectHandler struct {
+	BaseHandler
 }
 
-// Reply send a beer select reply to the slack channel
-func (req *BeerSelectReplyer) Reply(w http.ResponseWriter, msg *event.CallbackEvent) {
-	logger := log.GetLogger()
-	logger.Debug("BaseSelectReplyer reply:empty")
+// NewBeerSelectHandler return an BeerSelectReply instance.
+func NewBeerSelectHandler() *BeerSelectHandler {
+	return &BeerSelectHandler{}
+}
+
+// Handler a beer select event.
+func (h *BeerSelectHandler) Handle(w http.ResponseWriter, msg *model.CallbackEvent) error {
+	log := h.log
+
+	log.Debug("BaseSelectReplyer reply:empty")
 	w.WriteHeader(http.StatusOK)
 	/*
 		client, err := GetClient()
@@ -68,11 +72,17 @@ func (req *BeerSelectReplyer) Reply(w http.ResponseWriter, msg *event.CallbackEv
 			},
 		}
 
-			channelID, timestamp, err := client.PostMessage(e.ChannelID, slack.MsgOptionText("Some Text", false), slack.MsgOptionAttachments(attachment))
+			channelID, timestamp, err := client.PostMessage(
+				e.ChannelID,
+				slack.MsgOptionText("Some Text", false),
+				slack.MsgOptionAttachments(attachment),
+			)
 			if err != nil {
 				log.Error("BaseSelectReplyer failed", zap.Error(err))
 			}
 
 			log.Debug("Post Message", zap.String("channelID", channelID), zap.String("timestamp", timestamp))
 	*/
+
+	return nil
 }
