@@ -22,7 +22,7 @@ func NewBeerSelectHandler() *BeerSelectHandler {
 }
 
 // Handler a beer select event
-func (req *BeerSelectHandler) Handle(w http.ResponseWriter, msg *event.CallbackEvent) {
+func (req *BeerSelectHandler) Handle(w http.ResponseWriter, msg *event.CallbackEvent) error {
 	logger := log.GetLogger()
 	logger.Debug("BaseSelectReplyer reply:empty")
 	w.WriteHeader(http.StatusOK)
@@ -75,4 +75,6 @@ func (req *BeerSelectHandler) Handle(w http.ResponseWriter, msg *event.CallbackE
 
 			log.Debug("Post Message", zap.String("channelID", channelID), zap.String("timestamp", timestamp))
 	*/
+
+	return nil
 }

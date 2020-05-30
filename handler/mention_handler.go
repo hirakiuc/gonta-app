@@ -16,8 +16,10 @@ func NewMentionHandler() *MentionHandler {
 }
 
 // Reply send a response to the slack.
-func (req *MentionHandler) Reply(w http.ResponseWriter, msg *event.CallbackEvent) {
+func (req *MentionHandler) Handle(w http.ResponseWriter, msg *event.CallbackEvent) error {
 	logger := log.GetLogger()
 	logger.Debug("MentionHandler handle")
 	w.WriteHeader(http.StatusOK)
+
+	return nil
 }

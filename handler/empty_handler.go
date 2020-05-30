@@ -15,6 +15,8 @@ func NewEmptyHandler() *EmptyHandler {
 }
 
 // Reply respond an empty response.
-func (r *EmptyHandler) Reply(w http.ResponseWriter, msg *event.CallbackEvent) {
+func (r *EmptyHandler) Reply(w http.ResponseWriter, msg *event.CallbackEvent) error {
 	w.WriteHeader(http.StatusOK)
+
+	return nil
 }

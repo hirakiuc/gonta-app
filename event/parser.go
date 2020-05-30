@@ -3,47 +3,27 @@ package event
 import (
 	"bytes"
 	"encoding/json"
-	"strings"
 
 	scan "github.com/mattn/go-scan"
 )
 
 // Parser describe a parser instance to parse the slack events.
-type Parser struct {
+type EventParser struct {
 }
 
-// NewParser return a pointer to new parser instance.
-func NewParser() *Parser {
-	return &Parser{}
+type EventParseResult struct {
+	JSON  string
+	Type  string
+	Token string
 }
 
-// GetType extract type value in the json string.
-func (p *Parser) GetType(jsonStr string) (*string, error) {
-	reader := strings.NewReader(jsonStr)
-
-	var typeStr string
-	err := scan.ScanJSON(reader, "/type", &typeStr)
-	if err != nil {
-		return nil, err
-	}
-	return &typeStr, nil
+// NewEventParser return a pointer to new parser instance.
+func NewEventParser() *EventParser {
+	return &EventParser{}
 }
 
-// GetToken extract token value in the json string.
-func (p *Parser) GetToken(jsonStr string) (*string, error) {
-	reader := strings.NewReader(jsonStr)
-
-	var token string
-	err := scan.ScanJSON(reader, "/token", &token)
-	if err != nil {
-		return nil, err
-	}
-
-	return &token, nil
-}
-
-// ParseCallbackEvent parse the event as a CallbackEvent
-func (p *Parser) ParseCallbackEvent(jsonStr string) (*CallbackEvent, error) {
+// ParseCallbackEvent parse the event as a CallbackEvent.
+func (p *EventParser) ParseCallbackEvent(jsonStr string) (*CallbackEvent, error) {
 	e := CallbackEvent{}
 	if err := json.Unmarshal([]byte(jsonStr), &e); err != nil {
 		return nil, err
@@ -52,8 +32,8 @@ func (p *Parser) ParseCallbackEvent(jsonStr string) (*CallbackEvent, error) {
 	return &e, nil
 }
 
-// ParseURLVerificationEvent parse the event as a URLVerificationEvent
-func (p *Parser) ParseURLVerificationEvent(jsonStr string) (*URLVerificationEvent, error) {
+// ParseURLVerificationEvent parse the event as a URLVerificationEvent.
+func (p *EventParser) ParseURLVerificationEvent(jsonStr string) (*URLVerificationEvent, error) {
 	e := URLVerificationEvent{}
 	if err := json.Unmarshal([]byte(jsonStr), &e); err != nil {
 		return nil, err

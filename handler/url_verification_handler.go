@@ -2,9 +2,7 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/hirakiuc/gonta-app/event"
 	"github.com/hirakiuc/gonta-app/log"
@@ -24,7 +22,7 @@ func NewURLVerificationHandler() *URLVerificationHandler {
 }
 
 // Reply send the response for the URLVerification reply.
-func (replyer *URLVerificationHandler) Handle(w http.ResponseWriter, msg *event.URLVerificationEvent) {
+func (replyer *URLVerificationHandler) Handle(w http.ResponseWriter, msg *event.URLVerificationEvent) error {
 	log := log.GetLogger()
 
 	challenge := challengeResponse{Challenge: msg.Challenge}
@@ -34,7 +32,7 @@ func (replyer *URLVerificationHandler) Handle(w http.ResponseWriter, msg *event.
 		log.Error("Failed to marshal json response", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 
-		return
+		return err
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -42,7 +40,11 @@ func (replyer *URLVerificationHandler) Handle(w http.ResponseWriter, msg *event.
 
 	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
-		// Just log error
-		fmt.Fprintf(os.Stderr, "Failed: %s", err)
+		log.Error("Failed to respond the result")
+		w.WriteHeader(http.StatusInternalServerError)
+
+		return err
 	}
+
+	return nil
 }

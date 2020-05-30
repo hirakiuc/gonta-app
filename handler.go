@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/hirakiuc/gonta-app/event"
+	"github.com/hirakiuc/gonta-app/handler"
 	"github.com/hirakiuc/gonta-app/log"
-	"github.com/hirakiuc/gonta-app/reply"
 	"go.uber.org/zap"
 )
 
@@ -21,70 +21,58 @@ func Serve(w http.ResponseWriter, r *http.Request) {
 			zap.String("method", r.Method),
 		)
 		w.WriteHeader(http.StatusMethodNotAllowed)
+
 		return
 	}
 
+	result, err := parseBody(w, r, log)
+	if err != nil {
+		return
+	}
+
+	if result.Token != getVerificationToken() {
+		log.Debug("Invalid verification token", zap.String("verification token", result.Token))
+		w.WriteHeader(http.StatusUnauthorized)
+
+		return
+	}
+
+	err = handler.HandleEvent(w, result.type, result.JSON, log)
+	if err != nil {
+		return
+	}
+}
+
+func parseBody(w http.ResponseWriter, r *http.Request, log *zap.Logger) (*event.BodyParseResult, error) {
 	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Error("Failed to read request body", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
-		return
+
+		return nil, err
 	}
 
 	jsonStr, err := url.QueryUnescape(string(buf))
 	if err != nil {
 		log.Error("Failed to unescape request body", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
-		return
+
+		return nil, err
 	}
+
 	log.Debug("Received body", zap.String("body", jsonStr))
 
-	parser := event.NewParser()
-	// Only accept message from salck with valid token
-	token, err := parser.GetToken(jsonStr)
+	parser := event.NewBodyParser()
+
+	result, err := parser.Parse(jsonStr)
 	if err != nil {
-		log.Error("Failed to extract token from the event", zap.Error(err))
+		log.Error("Failed to parse event", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if *token != getVerificationToken() {
-		log.Debug("Invalid verification token", zap.String("verification token", *token))
-		w.WriteHeader(http.StatusUnauthorized)
-		return
+
+		return nil, err
 	}
 
-	eventType, err := parser.GetType(jsonStr)
-	if err != nil {
-		log.Error("Failed to parse the type", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	switch *eventType {
-	case "url_verification":
-		e, err := parser.ParseURLVerificationEvent(jsonStr)
-		if err != nil {
-			log.Error("Failed to parse the URLVerificationEvent", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		replyer := reply.NewURLVerificationReplyer()
-		replyer.Reply(w, e)
-
-		// Reply NewUrlVerificationReplyer
-	default:
-		e, err := parser.ParseCallbackEvent(jsonStr)
-		if err != nil {
-			log.Error("Failed to parse the CallbackEvent", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		// Reply
-		replyer := reply.NewMentionReplyer()
-		replyer.Reply(w, e)
-	}
+	return result, nil
 }
 
 func getVerificationToken() string {
