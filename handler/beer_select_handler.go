@@ -3,7 +3,6 @@ package handler
 import (
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/log"
 	"github.com/hirakiuc/gonta-app/model"
 )
 
@@ -16,7 +15,9 @@ const (
 */
 
 // BeerSelectHandler describe a instance of BeerSelect Request.
-type BeerSelectHandler struct{}
+type BeerSelectHandler struct {
+	BaseHandler
+}
 
 // NewBeerSelectHandler return an BeerSelectReply instance.
 func NewBeerSelectHandler() *BeerSelectHandler {
@@ -24,9 +25,10 @@ func NewBeerSelectHandler() *BeerSelectHandler {
 }
 
 // Handler a beer select event.
-func (req *BeerSelectHandler) Handle(w http.ResponseWriter, msg *model.CallbackEvent) error {
-	logger := log.GetLogger()
-	logger.Debug("BaseSelectReplyer reply:empty")
+func (h *BeerSelectHandler) Handle(w http.ResponseWriter, msg *model.CallbackEvent) error {
+	log := h.log
+
+	log.Debug("BaseSelectReplyer reply:empty")
 	w.WriteHeader(http.StatusOK)
 	/*
 		client, err := GetClient()

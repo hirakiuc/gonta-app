@@ -8,14 +8,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var logger *zap.Logger
-
 // GetLogger return a zap.Logger instance.
 func GetLogger() *zap.Logger {
-	if logger != nil {
-		return logger
-	}
-
 	level := zap.NewAtomicLevel()
 	level.SetLevel(zapcore.DebugLevel)
 

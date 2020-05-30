@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/log"
 	"github.com/hirakiuc/gonta-app/model"
 	"go.uber.org/zap"
 )
@@ -14,7 +13,9 @@ type challengeResponse struct {
 }
 
 // URLVerificationHandler describe a instance of URLVerification replyer.
-type URLVerificationHandler struct{}
+type URLVerificationHandler struct {
+	BaseHandler
+}
 
 // NewURLVerificationHandler return an URLVerificationReply instance.
 func NewURLVerificationHandler() *URLVerificationHandler {
@@ -22,8 +23,8 @@ func NewURLVerificationHandler() *URLVerificationHandler {
 }
 
 // Reply send the response for the URLVerification reply.
-func (replyer *URLVerificationHandler) Handle(w http.ResponseWriter, msg *model.URLVerificationEvent) error {
-	log := log.GetLogger()
+func (h *URLVerificationHandler) Handle(w http.ResponseWriter, msg *model.URLVerificationEvent) error {
+	log := h.log
 
 	challenge := challengeResponse{Challenge: msg.Challenge}
 
