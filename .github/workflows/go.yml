@@ -24,8 +24,8 @@ jobs:
         go mod download
         go mod vendor
 
-    - name: Build
-      run: go build -v .
+    - name: Lint
+      run: make check
 
-    - name: Test
-      run: go test -v .
+    - name: Build
+      run: make build
