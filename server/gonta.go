@@ -107,6 +107,7 @@ func (s *Gonta) handleEvent(w http.ResponseWriter, result *parser.BodyParseResul
 		}
 
 		handler := handler.NewURLVerificationHandler()
+		handler.SetLogger(log)
 
 		return handler.Handle(w, e)
 
@@ -120,6 +121,7 @@ func (s *Gonta) handleEvent(w http.ResponseWriter, result *parser.BodyParseResul
 		}
 
 		handler := handler.NewMentionHandler()
+		handler.SetLogger(log)
 
 		return handler.Handle(w, e)
 	}
