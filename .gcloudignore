@@ -16,4 +16,5 @@
 vendor
 env.yaml
 sample.env.yaml
+./vendor
 #!include:.gitignore

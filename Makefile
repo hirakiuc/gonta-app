@@ -23,4 +23,4 @@ vendor:
 	go mod vendor
 
 deploy:
-	gcloud functions deploy gonta --entry-point Serve --runtime go111 --trigger-http --project ${GCP_PROJECT} --env-vars-file ./env.yaml
+	gcloud functions deploy gonta --entry-point Serve --runtime go113 --trigger-http --project ${GCP_PROJECT} --env-vars-file ./env.yaml
