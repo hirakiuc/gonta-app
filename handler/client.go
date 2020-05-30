@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// ClientConfig describe a config for slack.Client
+// ClientConfig describe a config for slack.Client.
 type ClientConfig struct {
 	AppToken string `envconfig:"APP_TOKEN" required:"true"`
 }

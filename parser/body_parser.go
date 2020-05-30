@@ -6,7 +6,7 @@ import (
 	scan "github.com/mattn/go-scan"
 )
 
-// BodyParser describe a parser instance to parse request body
+// BodyParser describe a parser instance to parse request body.
 type BodyParser struct {
 }
 

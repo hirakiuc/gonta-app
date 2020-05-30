@@ -7,11 +7,13 @@ import (
 	"github.com/hirakiuc/gonta-app/model"
 )
 
+/*
 const (
 	actionSelect = "select"
 	actionStart  = "start"
 	actionCancel = "cancel"
 )
+*/
 
 // BeerSelectHandler describe a instance of BeerSelect Request.
 type BeerSelectHandler struct{}
@@ -21,7 +23,7 @@ func NewBeerSelectHandler() *BeerSelectHandler {
 	return &BeerSelectHandler{}
 }
 
-// Handler a beer select event
+// Handler a beer select event.
 func (req *BeerSelectHandler) Handle(w http.ResponseWriter, msg *model.CallbackEvent) error {
 	logger := log.GetLogger()
 	logger.Debug("BaseSelectReplyer reply:empty")
@@ -68,7 +70,11 @@ func (req *BeerSelectHandler) Handle(w http.ResponseWriter, msg *model.CallbackE
 			},
 		}
 
-			channelID, timestamp, err := client.PostMessage(e.ChannelID, slack.MsgOptionText("Some Text", false), slack.MsgOptionAttachments(attachment))
+			channelID, timestamp, err := client.PostMessage(
+				e.ChannelID,
+				slack.MsgOptionText("Some Text", false),
+				slack.MsgOptionAttachments(attachment),
+			)
 			if err != nil {
 				log.Error("BaseSelectReplyer failed", zap.Error(err))
 			}

@@ -93,6 +93,7 @@ func handleEvent(w http.ResponseWriter, result *parser.BodyParseResult, log *zap
 		}
 
 		handler := handler.NewURLVerificationHandler()
+
 		return handler.Handle(w, e)
 
 	default:
@@ -105,8 +106,7 @@ func handleEvent(w http.ResponseWriter, result *parser.BodyParseResult, log *zap
 		}
 
 		handler := handler.NewMentionHandler()
+
 		return handler.Handle(w, e)
 	}
-
-	return nil
 }

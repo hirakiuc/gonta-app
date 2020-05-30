@@ -64,6 +64,7 @@ func (e *CallbackEvent) GetEventType() (*string, error) {
 	reader := bytes.NewReader(e.Event)
 
 	var token string
+
 	err := scan.ScanJSON(reader, "/type", &token)
 	if err != nil {
 		return nil, err
