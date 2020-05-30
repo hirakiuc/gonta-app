@@ -1,9 +1,8 @@
-package event
+package parser
 
 import (
 	"strings"
 
-	"github.com/hirakiuc/gonta-app/handler"
 	scan "github.com/mattn/go-scan"
 )
 
@@ -66,8 +65,4 @@ func (p *BodyParser) getToken(jsonStr string) (string, error) {
 	}
 
 	return token, nil
-}
-
-func (result *BodyParseResult) EventHandler() (handler.Handler, error) {
-
 }

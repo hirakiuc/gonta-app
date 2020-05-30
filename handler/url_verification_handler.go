@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/event"
 	"github.com/hirakiuc/gonta-app/log"
+	"github.com/hirakiuc/gonta-app/model"
 	"go.uber.org/zap"
 )
 
@@ -22,7 +22,7 @@ func NewURLVerificationHandler() *URLVerificationHandler {
 }
 
 // Reply send the response for the URLVerification reply.
-func (replyer *URLVerificationHandler) Handle(w http.ResponseWriter, msg *event.URLVerificationEvent) error {
+func (replyer *URLVerificationHandler) Handle(w http.ResponseWriter, msg *model.URLVerificationEvent) error {
 	log := log.GetLogger()
 
 	challenge := challengeResponse{Challenge: msg.Challenge}

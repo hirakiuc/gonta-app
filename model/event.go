@@ -1,6 +1,11 @@
-package event
+package model
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/json"
+
+	"github.com/mattn/go-scan"
+)
 
 /*
 token:
@@ -52,4 +57,27 @@ type AppMentionEvent struct {
 	TS          string `json:"ts" required:"true"`
 	Type        string `json:"type" required:"true"`
 	User        string `json:"user" required:"true"`
+}
+
+// GetEventType extract the type value in the event json.
+func (e *CallbackEvent) GetEventType() (*string, error) {
+	reader := bytes.NewReader(e.Event)
+
+	var token string
+	err := scan.ScanJSON(reader, "/type", &token)
+	if err != nil {
+		return nil, err
+	}
+
+	return &token, nil
+}
+
+// ParseAppMentionEvent parse the event as a AppMentionEvent.
+func (e *CallbackEvent) ParseAppMentionEvent() (*AppMentionEvent, error) {
+	v := AppMentionEvent{}
+	if err := json.Unmarshal(e.Event, &v); err != nil {
+		return nil, err
+	}
+
+	return &v, nil
 }
