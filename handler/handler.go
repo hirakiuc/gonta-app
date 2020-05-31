@@ -3,13 +3,13 @@ package handler
 import (
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/model"
+	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
 
 type Handler interface {
 	SetLogger(logger *zap.Logger)
-	Handle(w http.ResponseWriter, msg *model.CallbackEvent) error
+	Handle(w http.ResponseWriter, event *slackevents.EventsAPIEvent) error
 }
 
 type BaseHandler struct {

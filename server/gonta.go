@@ -1,15 +1,17 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 
 	"github.com/hirakiuc/gonta-app/handler"
-	"github.com/hirakiuc/gonta-app/parser"
+	"github.com/labstack/gommon/log"
+
+	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
 
@@ -31,106 +33,61 @@ func (s *Gonta) Serve(w http.ResponseWriter, r *http.Request) {
 	log := s.log
 
 	if r.Method != http.MethodPost {
-		log.Debug("Invalid http method",
-			zap.String("method", r.Method),
-		)
+		log.Debug("Invalid http method", zap.String("method", r.Method))
 		w.WriteHeader(http.StatusMethodNotAllowed)
 
 		return
 	}
 
-	result, err := s.parseBody(w, r)
-	if err != nil {
-		return
-	}
-
-	if result.Token != getVerificationToken() {
-		log.Debug("Invalid verification token", zap.String("verification token", result.Token))
-		w.WriteHeader(http.StatusUnauthorized)
-
-		return
-	}
-
-	err = s.handleEvent(w, result)
-	if err != nil {
-		return
-	}
-}
-
-func (s *Gonta) parseBody(w http.ResponseWriter, r *http.Request) (*parser.BodyParseResult, error) {
-	log := s.log
-
-	buf, err := ioutil.ReadAll(r.Body)
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Error("Failed to read request body", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 
-		return nil, err
+		return
 	}
 
-	jsonStr, err := url.QueryUnescape(string(buf))
+	opts := slackevents.OptionVerifyToken(
+		&slackevents.TokenComparator{
+			VerificationToken: getVerificationToken(),
+		},
+	)
+
+	eventsAPIEvent, err := slackevents.ParseEvent(json.RawMessage(body), opts)
 	if err != nil {
-		log.Error("Failed to unescape request body", zap.Error(err))
+		log.Error("Failed to parse request body", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+
+		return
+	}
+
+	handler, err := handlerByEventType(eventsAPIEvent.Type)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 
-		return nil, err
+		return
 	}
 
-	log.Debug("Received body", zap.String("body", jsonStr))
+	handler.SetLogger(log)
 
-	bodyParser := parser.NewBodyParser()
-
-	result, err := bodyParser.Parse(jsonStr)
-	if err != nil {
-		log.Error("Failed to parse event", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-
-		return nil, err
+	if err = handler.Handle(w, &eventsAPIEvent); err != nil {
+		log.Error("Failed to process the request", zap.Error(err))
 	}
-
-	return result, nil
 }
 
 func getVerificationToken() string {
 	return os.Getenv("VERIFICATION_TOKEN")
 }
 
-func (s *Gonta) handleEvent(w http.ResponseWriter, result *parser.BodyParseResult) error {
-	log := s.log
-
-	eventParser := parser.NewEventParser()
-
-	switch result.Type {
-	case "url_verification":
-		e, err := eventParser.ParseURLVerificationEvent(result.JSON)
-		if err != nil {
-			log.Error("Failed to parse the URLVerificationEvent", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
-
-			return err
-		}
-
-		handler := handler.NewURLVerificationHandler()
-		handler.SetLogger(log)
-
-		return handler.Handle(w, e)
-
-	case "event_callback":
-		e, err := eventParser.ParseCallbackEvent(result.JSON)
-		if err != nil {
-			log.Error("Failed to parse the CallbackEvent", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
-
-			return err
-		}
-
-		handler := handler.NewMentionHandler()
-		handler.SetLogger(log)
-
-		return handler.Handle(w, e)
+func handlerByEventType(eventType string) (handler.Handler, error) {
+	switch eventType {
+	case slackevents.URLVerification:
+		return handler.NewURLVerificationHandler(), nil
+	case slackevents.CallbackEvent:
+		return handler.NewCallbackEventHandler(), nil
 	default:
-		log.Error("Unexpected event type", zap.String("type", result.Type))
+		log.Error("Unexpected event type", zap.String("type", eventType))
 
-		return fmt.Errorf("unexpected event type:%s %w", result.Type, ErrUnexpectedEventType)
+		return nil, fmt.Errorf("unexpected event type:%s %w", eventType, ErrUnexpectedEventType)
 	}
 }

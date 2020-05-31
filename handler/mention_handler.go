@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/model"
+	"github.com/slack-go/slack/slackevents"
 )
 
 // MentionHandler describe a instance of MentionHandler.
@@ -17,7 +17,11 @@ func NewMentionHandler() *MentionHandler {
 }
 
 // Reply send a response to the slack.
-func (h *MentionHandler) Handle(w http.ResponseWriter, msg *model.CallbackEvent) error {
+func (h *MentionHandler) Handle(
+	w http.ResponseWriter,
+	event *slackevents.EventsAPIEvent,
+	innerEvent *slackevents.AppMentionEvent,
+) error {
 	log := h.log
 
 	log.Debug("MentionHandler handle")
