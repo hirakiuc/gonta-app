@@ -1,6 +1,8 @@
 package server
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -10,6 +12,8 @@ import (
 	"github.com/hirakiuc/gonta-app/parser"
 	"go.uber.org/zap"
 )
+
+var ErrUnexpectedEventType = errors.New("unexpected event type")
 
 // Gonta describe a http server to serve gonta services.
 type Gonta struct {
@@ -111,7 +115,7 @@ func (s *Gonta) handleEvent(w http.ResponseWriter, result *parser.BodyParseResul
 
 		return handler.Handle(w, e)
 
-	default:
+	case "event_callback":
 		e, err := eventParser.ParseCallbackEvent(result.JSON)
 		if err != nil {
 			log.Error("Failed to parse the CallbackEvent", zap.Error(err))
@@ -124,5 +128,9 @@ func (s *Gonta) handleEvent(w http.ResponseWriter, result *parser.BodyParseResul
 		handler.SetLogger(log)
 
 		return handler.Handle(w, e)
+	default:
+		log.Error("Unexpected event type", zap.String("type", result.Type))
+
+		return fmt.Errorf("unexpected event type:%s %w", result.Type, ErrUnexpectedEventType)
 	}
 }

@@ -50,27 +50,30 @@ type CallbackEvent struct {
 
 // AppMentionEvent describe the actual event from slack.
 type AppMentionEvent struct {
-	Channel     string `json:"channel" required:"true"`
-	ClientMsgID string `json:"client_msg_id" required:"true"`
-	EventTS     string `json:"event_ts" required:"true"`
-	Text        string `json:"text" required:"true"`
-	TS          string `json:"ts" required:"true"`
-	Type        string `json:"type" required:"true"`
-	User        string `json:"user" required:"true"`
+	Channel string `json:"channel" required:"true"`
+	EventTS string `json:"event_ts" required:"true"`
+	Text    string `json:"text" required:"true"`
+	TS      string `json:"ts" required:"true"`
+	Type    string `json:"type" required:"true"`
+	User    string `json:"user" required:"true"`
+
+	ClientMsgID string `json:"client_msg_id" required:"false"`
+	Team        string `json:"team" required:"false"`
+	Blocks      string `json:"blocks" required:"false"`
 }
 
 // GetEventType extract the type value in the event json.
-func (e *CallbackEvent) GetEventType() (*string, error) {
+func (e *CallbackEvent) GetEventType() (string, error) {
 	reader := bytes.NewReader(e.Event)
 
 	var token string
 
 	err := scan.ScanJSON(reader, "/type", &token)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &token, nil
+	return token, nil
 }
 
 // ParseAppMentionEvent parse the event as a AppMentionEvent.
