@@ -2,15 +2,15 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/model"
+	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
 
-type challengeResponse struct {
-	Challenge string `json:"challenge"`
-}
+var ErrUnexpectedEvent = errors.New("unexpected event type")
 
 // URLVerificationHandler describe a instance of URLVerification replyer.
 type URLVerificationHandler struct {
@@ -23,10 +23,20 @@ func NewURLVerificationHandler() *URLVerificationHandler {
 }
 
 // Reply send the response for the URLVerification reply.
-func (h *URLVerificationHandler) Handle(w http.ResponseWriter, msg *model.URLVerificationEvent) error {
+func (h *URLVerificationHandler) Handle(w http.ResponseWriter, event *slackevents.EventsAPIEvent) error {
 	log := h.log
 
-	challenge := challengeResponse{Challenge: msg.Challenge}
+	d, ok := event.Data.(slackevents.EventsAPIURLVerificationEvent)
+	if !ok {
+		log.Error("Unexpected type")
+		w.WriteHeader(http.StatusInternalServerError)
+
+		return fmt.Errorf("unexpected event type:%w", ErrUnexpectedEvent)
+	}
+
+	challenge := slackevents.ChallengeResponse{
+		Challenge: d.Challenge,
+	}
 
 	res, err := json.Marshal(challenge)
 	if err != nil {

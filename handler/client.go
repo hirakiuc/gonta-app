@@ -1,26 +1,17 @@
 package handler
 
 import (
-	"github.com/hirakiuc/gonta-app/log"
-	"github.com/kelseyhightower/envconfig"
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 	"go.uber.org/zap"
 )
 
-// ClientConfig describe a config for slack.Client.
-type ClientConfig struct {
-	AppToken string `envconfig:"APP_TOKEN" required:"true"`
+// ClientOption describe a config for slack.Client.
+type ClientOption struct {
+	Token string
+	Log   *zap.Logger
 }
 
 // GetClient return a slack.Client instance.
-func GetClient() (*slack.Client, error) {
-	log := log.GetLogger()
-
-	var conf ClientConfig
-	if err := envconfig.Process("", &conf); err != nil {
-		log.Error("Failed to load ClientConfig", zap.Error(err))
-		return nil, err
-	}
-
-	return slack.New(conf.AppToken), nil
+func GetClient(opts ClientOption) (*slack.Client, error) {
+	return slack.New(opts.Token), nil
 }

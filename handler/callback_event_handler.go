@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/model"
+	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
 
@@ -19,28 +19,22 @@ func NewCallbackEventHandler() *CallbackEventHandler {
 	return &CallbackEventHandler{}
 }
 
-func (h *CallbackEventHandler) Handle(w http.ResponseWriter, msg *model.CallbackEvent) error {
+func (h *CallbackEventHandler) Handle(w http.ResponseWriter, event *slackevents.EventsAPIEvent) error {
 	log := h.log
 
-	t, err := msg.GetEventType()
-	if err != nil {
-		log.Error("Failed to extract event type", zap.Error(err))
-
-		return err
-	}
-
-	switch t {
-	case "app_mention":
+	innerEvent := event.InnerEvent
+	switch ev := innerEvent.Data.(type) {
+	case *slackevents.AppMentionEvent:
 		handler := NewMentionHandler()
 		handler.SetLogger(log)
 
-		return handler.Handle(w, msg)
+		return handler.Handle(w, event, ev)
 	default:
-		log.Error("un-supported event type", zap.String("type", t))
+		log.Error("un-supported event type", zap.String("type", innerEvent.Type))
 
 		return fmt.Errorf(
 			"unsupported event type:%s %w",
-			t,
+			innerEvent.Type,
 			ErrUnsupportedEventType,
 		)
 	}
