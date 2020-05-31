@@ -1,3 +1,5 @@
+![workflow:Go](https://github.com/hirakiuc/gonta-app/workflows/Go/badge.svg)
+
 # gonta-app
 
 `gonta-app` is a slack app written in golang, as a Cloud Function.
