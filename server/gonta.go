@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/hirakiuc/gonta-app/handler"
-	"github.com/labstack/gommon/log"
 
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
@@ -61,7 +60,7 @@ func (s *Gonta) Serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler, err := handlerByEventType(eventsAPIEvent.Type)
+	handler, err := s.handlerByEventType(eventsAPIEvent.Type)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 
@@ -79,7 +78,9 @@ func getVerificationToken() string {
 	return os.Getenv("VERIFICATION_TOKEN")
 }
 
-func handlerByEventType(eventType string) (handler.Handler, error) {
+func (s *Gonta) handlerByEventType(eventType string) (handler.Handler, error) {
+	log := s.log
+
 	switch eventType {
 	case slackevents.URLVerification:
 		return handler.NewURLVerificationHandler(), nil
