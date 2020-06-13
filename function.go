@@ -12,11 +12,16 @@ import (
 	"github.com/hirakiuc/gonta-app/server"
 )
 
+// nolint:gochecknoglobals
+var srv *server.Gonta
+
+// nolint:gochecknoinits
+func init() {
+	logger := log.GetLogger()
+	srv = server.NewGonta(logger)
+}
+
 // Serve handles the http request.
 func Serve(w http.ResponseWriter, r *http.Request) {
-	log := log.GetLogger()
-
-	gonta := server.NewGonta(log)
-
-	gonta.Serve(w, r)
+	srv.Serve(w, r)
 }
