@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/hirakiuc/gonta-app/handler"
-
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
@@ -78,14 +76,14 @@ func getVerificationToken() string {
 	return os.Getenv("VERIFICATION_TOKEN")
 }
 
-func (s *Gonta) handlerByEventType(eventType string) (handler.Handler, error) {
+func (s *Gonta) handlerByEventType(eventType string) (Handler, error) {
 	log := s.log
 
 	switch eventType {
 	case slackevents.URLVerification:
-		return handler.NewURLVerificationHandler(), nil
+		return NewURLVerificationHandler(), nil
 	case slackevents.CallbackEvent:
-		return handler.NewCallbackEventHandler(), nil
+		return NewCallbackEventHandler(), nil
 	default:
 		log.Error("Unexpected event type", zap.String("type", eventType))
 
