@@ -1,9 +1,11 @@
-package handler
+package server
 
 import (
 	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/hirakiuc/gonta-app/handler"
 
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
@@ -25,7 +27,7 @@ func (h *CallbackEventHandler) Handle(w http.ResponseWriter, event *slackevents.
 	innerEvent := event.InnerEvent
 	switch ev := innerEvent.Data.(type) {
 	case *slackevents.AppMentionEvent:
-		handler := NewMentionHandler()
+		handler := handler.NewMentionHandler()
 		handler.SetLogger(log)
 
 		return handler.Handle(w, event, ev)
