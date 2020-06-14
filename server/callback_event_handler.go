@@ -2,42 +2,32 @@ package server
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/handler"
+	"github.com/hirakiuc/gonta-app/event"
 
 	"github.com/slack-go/slack/slackevents"
-	"go.uber.org/zap"
 )
 
 var ErrUnsupportedEventType = errors.New("unsuppoted event type")
 
 type CallbackEventHandler struct {
+	dispatcher *event.Dispatcher
+
 	BaseHandler
 }
 
-func NewCallbackEventHandler() *CallbackEventHandler {
-	return &CallbackEventHandler{}
+func NewCallbackEventHandler(dispatcher *event.Dispatcher) *CallbackEventHandler {
+	return &CallbackEventHandler{
+		dispatcher: dispatcher,
+	}
 }
 
-func (h *CallbackEventHandler) Handle(w http.ResponseWriter, event *slackevents.EventsAPIEvent) error {
-	log := h.log
+func (h *CallbackEventHandler) Handle(w http.ResponseWriter, e *slackevents.EventsAPIEvent) error {
+	wg := (h.dispatcher).Dispatch(e)
+	wg.Wait()
 
-	innerEvent := event.InnerEvent
-	switch ev := innerEvent.Data.(type) {
-	case *slackevents.AppMentionEvent:
-		handler := handler.NewMentionHandler()
-		handler.SetLogger(log)
+	w.WriteHeader(http.StatusOK)
 
-		return handler.Handle(w, event, ev)
-	default:
-		log.Error("un-supported event type", zap.String("type", innerEvent.Type))
-
-		return fmt.Errorf(
-			"unsupported event type:%s %w",
-			innerEvent.Type,
-			ErrUnsupportedEventType,
-		)
-	}
+	return nil
 }

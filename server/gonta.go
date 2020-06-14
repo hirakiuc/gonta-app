@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/hirakiuc/gonta-app/event"
+
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
@@ -16,12 +18,14 @@ var ErrUnexpectedEventType = errors.New("unexpected event type")
 
 // Gonta describe a http server to serve gonta services.
 type Gonta struct {
-	log *zap.Logger
+	log        *zap.Logger
+	dispatcher *event.Dispatcher
 }
 
-func NewGonta(logger *zap.Logger) *Gonta {
+func NewGonta(logger *zap.Logger, d *event.Dispatcher) *Gonta {
 	return &Gonta{
-		log: logger,
+		log:        logger,
+		dispatcher: d,
 	}
 }
 
@@ -83,7 +87,7 @@ func (s *Gonta) handlerByEventType(eventType string) (Handler, error) {
 	case slackevents.URLVerification:
 		return NewURLVerificationHandler(), nil
 	case slackevents.CallbackEvent:
-		return NewCallbackEventHandler(), nil
+		return NewCallbackEventHandler(s.dispatcher), nil
 	default:
 		log.Error("Unexpected event type", zap.String("type", eventType))
 
