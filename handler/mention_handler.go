@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"net/http"
-
 	"github.com/slack-go/slack/slackevents"
 )
 
@@ -17,15 +15,10 @@ func NewMentionHandler() *MentionHandler {
 }
 
 // Reply send a response to the slack.
-func (h *MentionHandler) Handle(
-	w http.ResponseWriter,
-	event *slackevents.EventsAPIEvent,
-	innerEvent *slackevents.AppMentionEvent,
-) error {
+func (h *MentionHandler) Handle(e *slackevents.EventsAPIEvent) error {
 	log := h.log
 
 	log.Debug("MentionHandler handle")
-	w.WriteHeader(http.StatusOK)
 
 	return nil
 }

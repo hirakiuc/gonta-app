@@ -8,6 +8,7 @@ package gonta
 import (
 	"net/http"
 
+	"github.com/hirakiuc/gonta-app/event"
 	"github.com/hirakiuc/gonta-app/log"
 	"github.com/hirakiuc/gonta-app/server"
 )
@@ -18,7 +19,10 @@ var srv *server.Gonta
 // nolint:gochecknoinits
 func init() {
 	logger := log.GetLogger()
-	srv = server.NewGonta(logger)
+	logger.Debug("init gonta")
+
+	d := event.NewDispatcher(logger)
+	srv = server.NewGonta(logger, d)
 }
 
 // Serve handles the http request.

@@ -1,15 +1,13 @@
 package handler
 
 import (
-	"net/http"
-
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
 
 type Handler interface {
 	SetLogger(logger *zap.Logger)
-	Handle(w http.ResponseWriter, event *slackevents.EventsAPIEvent) error
+	Handle(event *slackevents.EventsAPIEvent) error
 }
 
 type BaseHandler struct {
