@@ -33,7 +33,7 @@ func NewDispatcher(logger *zap.Logger) *Dispatcher {
 }
 
 func (d *Dispatcher) Register(eventType string, h handler.Handler) {
-	d.log.Debug("Register handler", zap.String("event", eventType), zap.String("handler", reflect.TypeOf(h).Name()))
+	d.log.Debug("Register handler", zap.String("event", eventType), zap.String("handler", reflect.TypeOf(h).String()))
 
 	handlers, ok := d.handlers[eventType]
 	if ok {
