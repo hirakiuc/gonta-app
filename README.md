@@ -10,6 +10,7 @@
 |:-----|:-----------:|
 | GO111MODULE | on |
 | GCP\_PROJECT | `your gcp project` |
+| GCP\_SERVICE\_ACCOUNT | `your service account email` |
 
 # HowToDev
 
