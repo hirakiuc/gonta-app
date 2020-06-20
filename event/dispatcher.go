@@ -1,14 +1,18 @@
 package event
 
 import (
+	"context"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/hirakiuc/gonta-app/handler"
 
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
+
+const JobTimeout = 3 * time.Second
 
 type Dispatcher struct {
 	log      *zap.Logger
@@ -43,7 +47,8 @@ func (d *Dispatcher) Register(eventType string, h handler.Handler) {
 	}
 }
 
-func (d *Dispatcher) Dispatch(e *slackevents.EventsAPIEvent) *sync.WaitGroup {
+// Dispatch invoke handlers with this event.
+func (d *Dispatcher) Dispatch(ctx context.Context, e *slackevents.EventsAPIEvent) *sync.WaitGroup {
 	log := d.log
 	wg := &sync.WaitGroup{}
 	innerEvent := e.InnerEvent
@@ -58,14 +63,40 @@ func (d *Dispatcher) Dispatch(e *slackevents.EventsAPIEvent) *sync.WaitGroup {
 
 		h.SetLogger(log)
 
-		go func(hdl handler.Handler, evt *slackevents.EventsAPIEvent) {
-			if err := hdl.Handle(evt); err != nil {
-				log.Error("Failed to handle event:")
+		go d.invokeHandler(ctx, h, e, func(err error) {
+			if err != nil {
+				log.Error("failed to handle event", zap.Error(err))
 			}
 
 			wg.Done()
-		}(h, e)
+		})
 	}
 
 	return wg
+}
+
+func (d *Dispatcher) invokeHandler(
+	ctx context.Context, hdl handler.Handler, e *slackevents.EventsAPIEvent, callback func(err error),
+) {
+	// context with timeout,  for this handler
+	cx, cancel := context.WithTimeout(ctx, JobTimeout)
+	defer cancel()
+
+	// channel to receive the result from handler
+	ch := make(chan error, 1)
+
+	go func() {
+		ch <- hdl.Handle(cx, e)
+	}()
+
+	select {
+	case err := <-ch: // finish handler before timeout
+		// ignore error if receives because the error should be logged in handler code
+		callback(err)
+	case <-cx.Done(): // finish with reason(cancel/deadlineexceeded)
+		err := cx.Err()
+		callback(err)
+	}
+
+	callback(nil)
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -69,9 +70,11 @@ func (s *Gonta) Serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := context.Background()
+
 	handler.SetLogger(log)
 
-	if err = handler.Handle(w, &eventsAPIEvent); err != nil {
+	if err = handler.Handle(ctx, w, &eventsAPIEvent); err != nil {
 		log.Error("Failed to process the request", zap.Error(err))
 	}
 }

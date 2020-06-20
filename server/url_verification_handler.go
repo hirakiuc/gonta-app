@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,7 +24,9 @@ func NewURLVerificationHandler() *URLVerificationHandler {
 }
 
 // Reply send the response for the URLVerification reply.
-func (h *URLVerificationHandler) Handle(w http.ResponseWriter, event *slackevents.EventsAPIEvent) error {
+func (h *URLVerificationHandler) Handle(
+	_ context.Context, w http.ResponseWriter, event *slackevents.EventsAPIEvent,
+) error {
 	log := h.log
 
 	d, ok := event.Data.(slackevents.EventsAPIURLVerificationEvent)

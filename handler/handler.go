@@ -1,13 +1,15 @@
 package handler
 
 import (
+	"context"
+
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
 
 type Handler interface {
 	SetLogger(logger *zap.Logger)
-	Handle(event *slackevents.EventsAPIEvent) error
+	Handle(ctx context.Context, event *slackevents.EventsAPIEvent) error
 }
 
 type BaseHandler struct {

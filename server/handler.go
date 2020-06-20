@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/slack-go/slack/slackevents"
@@ -9,7 +10,7 @@ import (
 
 type Handler interface {
 	SetLogger(logger *zap.Logger)
-	Handle(w http.ResponseWriter, event *slackevents.EventsAPIEvent) error
+	Handle(ctx context.Context, w http.ResponseWriter, event *slackevents.EventsAPIEvent) error
 }
 
 type BaseHandler struct {
