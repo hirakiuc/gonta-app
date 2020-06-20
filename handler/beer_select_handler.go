@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	"github.com/slack-go/slack/slackevents"
 )
 
@@ -23,7 +25,7 @@ func NewBeerSelectHandler() *BeerSelectHandler {
 }
 
 // Handler a beer select event.
-func (h *BeerSelectHandler) Handle(event *slackevents.EventsAPIEvent) error {
+func (h *BeerSelectHandler) Handle(_ context.Context, event *slackevents.EventsAPIEvent) error {
 	log := h.log
 
 	log.Debug("BaseSelectReplyer reply:empty")
