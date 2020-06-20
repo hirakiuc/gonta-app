@@ -28,11 +28,11 @@ func (h *CallbackEventHandler) Handle(ctx context.Context, w http.ResponseWriter
 	// Dispatch this event to each registered handlers.
 	wg := (h.dispatcher).Dispatch(ctx, e)
 
-	// Wait until invoked handlers finish
-	wg.Wait()
-
 	// Send a response (200 OK)
 	w.WriteHeader(http.StatusOK)
+
+	// Wait until invoked handlers finish
+	wg.Wait()
 
 	return nil
 }

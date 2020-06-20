@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
+	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
@@ -35,6 +37,11 @@ func (h *MentionHandler) innerEvent(e *slackevents.EventsAPIEvent) (*slackevents
 	}
 }
 
+func slackAPI() *slack.Client {
+	token := os.Getenv("BOT_USER_ACCESS_TOKEN")
+	return slack.New(token)
+}
+
 // Reply send a response to the slack.
 func (h *MentionHandler) Handle(ctx context.Context, e *slackevents.EventsAPIEvent) error {
 	log := h.log
@@ -46,17 +53,15 @@ func (h *MentionHandler) Handle(ctx context.Context, e *slackevents.EventsAPIEve
 
 	log.Debug("MentionHandler handle", zap.String("received", ev.Text))
 
-	/*
-		api := slack.New(e.Token)
+	api := slackAPI()
 
-		channel, tstamp, err := api.PostMessageContext(ctx, ev.Channel, slack.MsgOptionText("Yes, hello", false))
-		if err != nil {
-			log.Error("failed to send a message", zap.Error(err))
-			return err
-		}
+	channel, tstamp, err := api.PostMessageContext(ctx, ev.Channel, slack.MsgOptionText("Yes, hello", false))
+	if err != nil {
+		log.Error("failed to send a message", zap.Error(err))
+		return err
+	}
 
-		log.Debug("sent a message", zap.String("channel", channel), zap.String("timestamp", tstamp))
-	*/
+	log.Debug("sent a message", zap.String("channel", channel), zap.String("timestamp", tstamp))
 
 	return nil
 }
