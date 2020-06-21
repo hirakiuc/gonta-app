@@ -21,12 +21,16 @@ var ErrUnexpectedEventType = errors.New("unexpected event type")
 type Gonta struct {
 	log        *zap.Logger
 	dispatcher *event.Dispatcher
+
+	VerificationToken string
 }
 
 func NewGonta(logger *zap.Logger, d *event.Dispatcher) *Gonta {
 	return &Gonta{
 		log:        logger,
 		dispatcher: d,
+
+		VerificationToken: os.Getenv("VERIFICATION_TOKEN"),
 	}
 }
 
@@ -51,7 +55,7 @@ func (s *Gonta) Serve(w http.ResponseWriter, r *http.Request) {
 
 	opts := slackevents.OptionVerifyToken(
 		&slackevents.TokenComparator{
-			VerificationToken: getVerificationToken(),
+			VerificationToken: s.VerificationToken,
 		},
 	)
 
@@ -77,10 +81,6 @@ func (s *Gonta) Serve(w http.ResponseWriter, r *http.Request) {
 	if err = handler.Handle(ctx, w, &eventsAPIEvent); err != nil {
 		log.Error("Failed to process the request", zap.Error(err))
 	}
-}
-
-func getVerificationToken() string {
-	return os.Getenv("VERIFICATION_TOKEN")
 }
 
 func (s *Gonta) handlerByEventType(eventType string) (Handler, error) {
