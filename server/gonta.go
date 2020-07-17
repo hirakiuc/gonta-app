@@ -1,16 +1,19 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 
 	"github.com/hirakiuc/gonta-app/event"
 
+	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
@@ -34,8 +37,45 @@ func NewGonta(logger *zap.Logger, d *event.Dispatcher) *Gonta {
 	}
 }
 
-// Serve handles the http request.
-func (s *Gonta) Serve(w http.ResponseWriter, r *http.Request) {
+// nolint:interfacer
+func (s *Gonta) SlackVerify(next http.HandlerFunc) http.HandlerFunc {
+	log := s.log
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		verifier, err := slack.NewSecretsVerifier(r.Header, os.Getenv("SLACK_SIGNING_SECRET"))
+		if err != nil {
+			log.Error("Failed to create verifier", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
+		bodyReader := io.TeeReader(r.Body, &verifier)
+
+		body, err := ioutil.ReadAll(bodyReader)
+		if err != nil {
+			log.Error("Failed to read body", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
+		err = verifier.Ensure()
+		if err != nil {
+			log.Error("Failed to verify request", zap.Error(err))
+			w.WriteHeader(http.StatusBadRequest)
+
+			return
+		}
+
+		r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
+		next.ServeHTTP(w, r)
+	}
+}
+
+// ServeEvents handles the http request.
+func (s *Gonta) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	log := s.log
 
 	if r.Method != http.MethodPost {
@@ -47,17 +87,13 @@ func (s *Gonta) Serve(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error("Failed to read request body", zap.Error(err))
+		log.Error("Failed to read body", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 
 		return
 	}
 
-	opts := slackevents.OptionVerifyToken(
-		&slackevents.TokenComparator{
-			VerificationToken: s.VerificationToken,
-		},
-	)
+	opts := slackevents.OptionNoVerifyToken()
 
 	eventsAPIEvent, err := slackevents.ParseEvent(json.RawMessage(body), opts)
 	if err != nil {
@@ -96,4 +132,48 @@ func (s *Gonta) handlerByEventType(eventType string) (Handler, error) {
 
 		return nil, fmt.Errorf("unexpected event type:%s %w", eventType, ErrUnexpectedEventType)
 	}
+}
+
+func (s *Gonta) ServeActions(w http.ResponseWriter, r *http.Request) {
+	log := s.log
+
+	var payload *slack.InteractionCallback
+
+	err := json.Unmarshal([]byte(r.FormValue("payload")), &payload)
+	if err != nil {
+		log.Error("failed to parse payload", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+
+	switch payload.Type {
+	case slack.InteractionTypeBlockActions:
+		if len(payload.ActionCallback.BlockActions) == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		action := payload.ActionCallback.BlockActions[0]
+		log.Debug("action.BlockID", zap.String("blockID", action.BlockID))
+		w.WriteHeader(http.StatusOK)
+	default:
+		log.Error("Unexpected case", zap.String("payload.Type", string(payload.Type)))
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (s *Gonta) ServeCommands(w http.ResponseWriter, r *http.Request) {
+	log := s.log
+
+	cmd, err := slack.SlashCommandParse(r)
+	if err != nil {
+		log.Error("Failed to parse command", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+
+	log.Debug("Received a command", zap.String("command", cmd.Command))
+	w.WriteHeader(http.StatusOK)
 }

@@ -1,0 +1,6 @@
+./vendor
+sample.*
+*.json
+env.yaml
+.github/
+.envrc
