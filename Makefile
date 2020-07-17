@@ -22,5 +22,5 @@ deps:
 vendor:
 	go mod vendor
 
-deploy:
-	gcloud functions deploy gonta --entry-point Serve --runtime go113 --trigger-http --project ${GCP_PROJECT} --service-account ${GCP_SERVICE_ACCOUNT} --env-vars-file ./env.yaml
+cloudbuild:
+	gcloud builds submit --tag gcr.io/${GCP_PROJECT}/gonta
