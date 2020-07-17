@@ -12,6 +12,7 @@
 # below:
 .git
 .gitignore
+.envrc
 
 vendor
 env.yaml
