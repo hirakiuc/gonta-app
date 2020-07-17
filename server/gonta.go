@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/hirakiuc/gonta-app/config"
 	"github.com/hirakiuc/gonta-app/event"
 
 	"github.com/slack-go/slack"
@@ -24,16 +25,14 @@ var ErrUnexpectedEventType = errors.New("unexpected event type")
 type Gonta struct {
 	log        *zap.Logger
 	dispatcher *event.Dispatcher
-
-	VerificationToken string
+	config     *config.Config
 }
 
-func NewGonta(logger *zap.Logger, d *event.Dispatcher) *Gonta {
+func NewGonta(logger *zap.Logger, d *event.Dispatcher, c *config.Config) *Gonta {
 	return &Gonta{
 		log:        logger,
 		dispatcher: d,
-
-		VerificationToken: os.Getenv("VERIFICATION_TOKEN"),
+		config:     c,
 	}
 }
 
@@ -113,6 +112,7 @@ func (s *Gonta) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
 	handler.SetLogger(log)
+	handler.SetConfig(s.config)
 
 	if err = handler.Handle(ctx, w, &eventsAPIEvent); err != nil {
 		log.Error("Failed to process the request", zap.Error(err))
