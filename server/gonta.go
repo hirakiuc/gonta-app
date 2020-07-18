@@ -73,6 +73,10 @@ func (s *Gonta) SlackVerify(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func (s *Gonta) ServeHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
+
 // ServeEvents handles the http request.
 func (s *Gonta) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	log := s.log

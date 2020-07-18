@@ -28,6 +28,7 @@ func main() {
 
 	http.HandleFunc("/serve", srv.SlackVerify(srv.ServeEvents))
 
+	http.HandleFunc("/health", srv.ServeHealth)
 	http.HandleFunc("/events", srv.SlackVerify(srv.ServeEvents))
 	http.HandleFunc("/actions", srv.SlackVerify(srv.ServeActions))
 	http.HandleFunc("/commands", srv.SlackVerify(srv.ServeCommands))
