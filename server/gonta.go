@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -74,9 +73,15 @@ func (s *Gonta) SlackVerify(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func (s *Gonta) ServeHealth(w http.ResponseWriter, r *http.Request) {
+	err := s.config.Load()
+	if err != nil {
+		s.log.Error("Failed to load config", zap.Error(err))
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
+// nolint:funlen
 // ServeEvents handles the http request.
 func (s *Gonta) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	log := s.log
@@ -106,35 +111,41 @@ func (s *Gonta) ServeEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler, err := s.handlerByEventType(eventsAPIEvent.Type)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	switch eventsAPIEvent.Type {
+	case slackevents.URLVerification:
+		var res *slackevents.ChallengeResponse
+
+		err := json.Unmarshal(body, &res)
+		if err != nil {
+			log.Error("Failed to parse body as URLVerification event", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain")
+
+		_, err = w.Write([]byte(res.Challenge))
+		if err != nil {
+			log.Error("Failed to write response", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
+	case slackevents.CallbackEvent:
+		ctx := context.Background()
+		// Dispatch this event to each registered handlers
+		wg := (s.dispatcher).Dispatch(ctx, &eventsAPIEvent)
+		wg.Wait()
+
+		w.WriteHeader(http.StatusOK)
+
+	default:
+		log.Error("Unexpected event type", zap.String("type", eventsAPIEvent.Type))
+		w.WriteHeader(http.StatusBadRequest)
 
 		return
-	}
-
-	ctx := context.Background()
-
-	handler.SetLogger(log)
-	handler.SetConfig(s.config)
-
-	if err = handler.Handle(ctx, w, &eventsAPIEvent); err != nil {
-		log.Error("Failed to process the request", zap.Error(err))
-	}
-}
-
-func (s *Gonta) handlerByEventType(eventType string) (Handler, error) {
-	log := s.log
-
-	switch eventType {
-	case slackevents.URLVerification:
-		return NewURLVerificationHandler(), nil
-	case slackevents.CallbackEvent:
-		return NewCallbackEventHandler(s.dispatcher), nil
-	default:
-		log.Error("Unexpected event type", zap.String("type", eventType))
-
-		return nil, fmt.Errorf("unexpected event type:%s %w", eventType, ErrUnexpectedEventType)
 	}
 }
 

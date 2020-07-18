@@ -9,8 +9,7 @@ type HandlerConfig struct {
 }
 
 type SlackConfig struct {
-	BotAccessToken string `envconfig:"BOT_USER_ACCESS_TOKEN" required:"true"`
-
+	BotAccessToken    string `envconfig:"BOT_USER_ACCESS_TOKEN" required:"true"`
 	VerificationToken string `envconfig:"VERIFICATION_TOKEN" required:"true"`
 	SigningSecret     string `envconfig:"SLACK_SIGNING_SECRET" required:"true"`
 }
