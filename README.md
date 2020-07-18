@@ -2,9 +2,11 @@
 
 # gonta-app
 
-`gonta-app` is a slack app written in golang, as a Cloud Function.
+`gonta-app` is a slack app written in golang.
 
-# Config
+# HowToDev
+
+## Environments
 
 | Name | Description |
 |:-----|:-----------:|
@@ -12,7 +14,7 @@
 | GCP\_PROJECT | `your gcp project` |
 | GCP\_SERVICE\_ACCOUNT | `your service account email` |
 
-# HowToDev
+## Run
 
 ```
 $ make run
@@ -20,5 +22,14 @@ $ make run
 
 # HowToDeploy
 
-1. Create `env.yaml` file from `sample.env.yml`.
-2. `make deploy`
+## Environments
+
+| Name | Description |
+|:-----|:-----------:|
+| BOT_USER_ACCESS_TOKEN | `your bot access token` |
+| VERIFICATION_TOKEN | `your verification_token` |
+| SLACK_SIGNING_SECRET | `your signing_secret` |
+
+## Deploy
+
+TBD

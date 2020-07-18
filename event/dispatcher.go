@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hirakiuc/gonta-app/config"
 	"github.com/hirakiuc/gonta-app/handler"
 
 	"github.com/slack-go/slack/slackevents"
@@ -17,12 +18,14 @@ const JobTimeout = 3 * time.Second
 type Dispatcher struct {
 	log      *zap.Logger
 	handlers map[string][]handler.Handler
+	config   *config.Config
 }
 
-func NewDispatcher(logger *zap.Logger) *Dispatcher {
+func NewDispatcher(logger *zap.Logger, c *config.Config) *Dispatcher {
 	d := &Dispatcher{
 		log:      logger,
 		handlers: map[string][]handler.Handler{},
+		config:   c,
 	}
 
 	handlerMap := handler.GenerateHandlerMap()
@@ -62,6 +65,7 @@ func (d *Dispatcher) Dispatch(ctx context.Context, e *slackevents.EventsAPIEvent
 		wg.Add(1)
 
 		h.SetLogger(log)
+		h.SetConfig(d.config.HandlerConfig())
 
 		go d.invokeHandler(ctx, h, e, func(err error) {
 			if err != nil {
