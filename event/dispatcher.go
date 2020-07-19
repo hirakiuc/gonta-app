@@ -88,7 +88,6 @@ func (d *Dispatcher) invokeHandler(
 
 	// channel to receive the result from handler
 	ch := make(chan error, 1)
-	defer close(ch)
 
 	go func() {
 		ch <- hdl.Handle(cx, e)
