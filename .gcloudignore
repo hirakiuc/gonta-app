@@ -16,6 +16,9 @@
 
 vendor
 env.yaml
-sample.env.yaml
-./vendor
+sample.*
+./*.json
+./gonta
+./.github
+./.envrc
 #!include:.gitignore
