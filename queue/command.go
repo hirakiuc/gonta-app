@@ -7,7 +7,7 @@ import (
 	"github.com/slack-go/slack"
 )
 
-type CommandCallback func(e *slack.SlashCommand)
+type CommandCallback func(e *slack.SlashCommand) error
 
 type CommandQueue struct {
 	queue     chan *slack.SlashCommand
@@ -58,7 +58,8 @@ func (q *CommandQueue) dispatch(e *slack.SlashCommand) {
 		q.wg.Add(1)
 
 		go func(wg *sync.WaitGroup, callback CommandCallback) {
-			callback(e)
+			_ = callback(e)
+
 			wg.Done()
 		}(q.wg, c)
 	}

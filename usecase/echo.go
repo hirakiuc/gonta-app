@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hirakiuc/gonta-app/config"
@@ -10,6 +11,8 @@ import (
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
+
+var ErrUnexpectedEventType = errors.New("unexpected event type")
 
 type Echo struct {
 	Base
@@ -35,12 +38,12 @@ func (u *Echo) innerEvent(e *slackevents.EventsAPIEvent) *slackevents.AppMention
 	}
 }
 
-func (u *Echo) ReceiveEvent(e *slackevents.EventsAPIEvent) {
+func (u *Echo) ReceiveEvent(e *slackevents.EventsAPIEvent) error {
 	u.logger.Info("Receive event:handler-echo", zap.String("handler", "echo"))
 
 	ev := u.innerEvent(e)
 	if ev == nil {
-		return
+		return fmt.Errorf("%w", ErrUnexpectedEventType)
 	}
 
 	api := u.slackAPI()
@@ -55,8 +58,10 @@ func (u *Echo) ReceiveEvent(e *slackevents.EventsAPIEvent) {
 		msg := fmt.Sprintf("Failed to send a message:%s", err.Error())
 		u.logger.Error(msg, zap.Error(err))
 
-		return
+		return err
 	}
 
 	u.logger.Debug("Sent a message", zap.String("channel", channel), zap.String("timestamp", tstamp))
+
+	return nil
 }

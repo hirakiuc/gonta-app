@@ -7,7 +7,7 @@ import (
 	"github.com/slack-go/slack"
 )
 
-type ActionCallback func(e *slack.InteractionCallback)
+type ActionCallback func(e *slack.InteractionCallback) error
 
 type ActionQueue struct {
 	queue     chan *slack.InteractionCallback
@@ -58,7 +58,8 @@ func (q *ActionQueue) dispatch(e *slack.InteractionCallback) {
 		q.wg.Add(1)
 
 		go func(wg *sync.WaitGroup, callback ActionCallback) {
-			callback(e)
+			_ = callback(e)
+
 			wg.Done()
 		}(q.wg, c)
 	}

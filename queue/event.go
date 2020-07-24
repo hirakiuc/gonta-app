@@ -6,7 +6,7 @@ import (
 	"github.com/slack-go/slack/slackevents"
 )
 
-type EventCallback func(e *slackevents.EventsAPIEvent)
+type EventCallback func(e *slackevents.EventsAPIEvent) error
 
 type EventQueue struct {
 	queue     chan *slackevents.EventsAPIEvent
@@ -71,7 +71,8 @@ func (q *EventQueue) dispatch(e *slackevents.EventsAPIEvent) {
 		q.wg.Add(1)
 
 		go func(wg *sync.WaitGroup, callback EventCallback) {
-			callback(e)
+			_ = callback(e)
+
 			wg.Done()
 		}(q.wg, c)
 	}
