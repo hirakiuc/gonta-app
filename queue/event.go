@@ -11,7 +11,7 @@ type EventCallback func(e *slackevents.EventsAPIEvent)
 
 type EventQueue struct {
 	queue     chan *slackevents.EventsAPIEvent
-	callbacks []EventCallback
+	callbacks map[string][]EventCallback
 
 	wg   *sync.WaitGroup
 	stop chan interface{}
@@ -20,14 +20,21 @@ type EventQueue struct {
 func NewEventQueue(size int64) *EventQueue {
 	return &EventQueue{
 		queue:     make(chan *slackevents.EventsAPIEvent, size),
-		callbacks: []EventCallback{},
+		callbacks: map[string][]EventCallback{},
 		wg:        &sync.WaitGroup{},
 		stop:      make(chan interface{}),
 	}
 }
 
-func (q *EventQueue) AddCallback(s EventCallback) {
-	q.callbacks = append(q.callbacks, s)
+func (q *EventQueue) AddCallback(eventType string, c EventCallback) {
+	v, ok := q.callbacks[eventType]
+	if !ok {
+		v = []EventCallback{c}
+	} else {
+		v = append(v, c)
+	}
+
+	q.callbacks[eventType] = v
 }
 
 func (q *EventQueue) Enqueue(e *slackevents.EventsAPIEvent) {
@@ -54,7 +61,14 @@ func (q *EventQueue) Wait() {
 }
 
 func (q *EventQueue) dispatch(e *slackevents.EventsAPIEvent) {
-	for _, c := range q.callbacks {
+	eventType := e.InnerEvent.Type
+
+	callbacks, ok := q.callbacks[eventType]
+	if !ok {
+		return
+	}
+
+	for _, c := range callbacks {
 		q.wg.Add(1)
 
 		go func(wg *sync.WaitGroup, callback EventCallback) {

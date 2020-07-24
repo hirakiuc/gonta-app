@@ -41,16 +41,16 @@ func (q *Queue) Stop() {
 	q.log.Info("Sent stop signals to queues...")
 }
 
-func (q *Queue) AddEventCallback(s EventCallback) {
-	q.events.AddCallback(s)
+func (q *Queue) AddEventCallback(eventType string, c EventCallback) {
+	q.events.AddCallback(eventType, c)
 }
 
-func (q *Queue) AddActionCallback(s ActionCallback) {
-	q.actions.AddCallback(s)
+func (q *Queue) AddActionCallback(c ActionCallback) {
+	q.actions.AddCallback(c)
 }
 
-func (q *Queue) AddCommandCallback(s CommandCallback) {
-	q.commands.AddCallback(s)
+func (q *Queue) AddCommandCallback(c CommandCallback) {
+	q.commands.AddCallback(c)
 }
 
 func (q *Queue) EnqueueEvent(e *slackevents.EventsAPIEvent) {
