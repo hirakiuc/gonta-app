@@ -10,6 +10,8 @@ import (
 	"github.com/hirakiuc/gonta-app/server"
 	"github.com/hirakiuc/gonta-app/usecase"
 
+	"github.com/slack-go/slack/slackevents"
+
 	"go.uber.org/zap"
 )
 
@@ -17,7 +19,7 @@ const QueueSize = 50
 
 func configureCallbacks(q *queue.Queue, conf *config.Config, logger *zap.Logger) {
 	echo := usecase.NewEcho(conf, logger)
-	q.AddEventCallback(echo.ReceiveEvent)
+	q.AddEventCallback(slackevents.AppMention, echo.ReceiveEvent)
 }
 
 func main() {
