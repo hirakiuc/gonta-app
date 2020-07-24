@@ -10,7 +10,7 @@ import (
 
 // GetLogger return a zap.Logger instance.
 func GetLogger() *zap.Logger {
-	logger, err := zapdriver.NewProductionWithCore(
+	logger, err := zapdriver.NewDevelopmentWithCore(
 		zapdriver.WrapCore(
 			zapdriver.ReportAllErrors(true),
 			zapdriver.ServiceName("gonta"),

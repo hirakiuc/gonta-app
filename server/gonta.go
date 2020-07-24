@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -11,7 +10,7 @@ import (
 	"os"
 
 	"github.com/hirakiuc/gonta-app/config"
-	"github.com/hirakiuc/gonta-app/event"
+	"github.com/hirakiuc/gonta-app/queue"
 
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
@@ -22,16 +21,16 @@ var ErrUnexpectedEventType = errors.New("unexpected event type")
 
 // Gonta describe a http server to serve gonta services.
 type Gonta struct {
-	log        *zap.Logger
-	dispatcher *event.Dispatcher
-	config     *config.Config
+	log    *zap.Logger
+	config *config.Config
+	queue  *queue.Queue
 }
 
-func NewGonta(logger *zap.Logger, d *event.Dispatcher, c *config.Config) *Gonta {
+func NewGonta(logger *zap.Logger, c *config.Config, q *queue.Queue) *Gonta {
 	return &Gonta{
-		log:        logger,
-		dispatcher: d,
-		config:     c,
+		log:    logger,
+		config: c,
+		queue:  q,
 	}
 }
 
@@ -134,10 +133,8 @@ func (s *Gonta) ServeEvents(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case slackevents.CallbackEvent:
-		ctx := context.Background()
-		// Dispatch this event to each registered handlers
-		wg := (s.dispatcher).Dispatch(ctx, &eventsAPIEvent)
-		wg.Wait()
+		// Enqueue the event
+		s.queue.EnqueueEvent(&eventsAPIEvent)
 
 		w.WriteHeader(http.StatusOK)
 
@@ -162,20 +159,11 @@ func (s *Gonta) ServeActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch payload.Type {
-	case slack.InteractionTypeBlockActions:
-		if len(payload.ActionCallback.BlockActions) == 0 {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	log.Debug("Received a action callback", zap.String("type", string(payload.Type)))
 
-		action := payload.ActionCallback.BlockActions[0]
-		log.Debug("action.BlockID", zap.String("blockID", action.BlockID))
-		w.WriteHeader(http.StatusOK)
-	default:
-		log.Error("Unexpected case", zap.String("payload.Type", string(payload.Type)))
-		w.WriteHeader(http.StatusInternalServerError)
-	}
+	s.queue.EnqueueAction(payload)
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Gonta) ServeCommands(w http.ResponseWriter, r *http.Request) {
@@ -188,6 +176,8 @@ func (s *Gonta) ServeCommands(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+
+	s.queue.EnqueueCommand(&cmd)
 
 	log.Debug("Received a command", zap.String("command", cmd.Command))
 	w.WriteHeader(http.StatusOK)
