@@ -5,12 +5,20 @@ import (
 	"os"
 
 	"github.com/hirakiuc/gonta-app/config"
-	"github.com/hirakiuc/gonta-app/event"
 	"github.com/hirakiuc/gonta-app/log"
+	"github.com/hirakiuc/gonta-app/queue"
 	"github.com/hirakiuc/gonta-app/server"
+	"github.com/hirakiuc/gonta-app/usecase"
 
 	"go.uber.org/zap"
 )
+
+const QueueSize = 50
+
+func configureCallbacks(q *queue.Queue, conf *config.Config, logger *zap.Logger) {
+	echo := usecase.NewEcho(conf, logger)
+	q.AddEventCallback(echo.ReceiveEvent)
+}
 
 func main() {
 	logger := log.GetLogger()
@@ -23,8 +31,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	d := event.NewDispatcher(logger, conf)
-	srv := server.NewGonta(logger, d, conf)
+	q := queue.New(QueueSize, logger)
+	configureCallbacks(q, conf, logger)
+
+	go q.Start()
+
+	defer func() {
+		q.Stop()
+		q.WaitUntilFinish()
+	}()
+
+	srv := server.NewGonta(logger, conf, q)
 
 	http.HandleFunc("/serve", srv.SlackVerify(srv.ServeEvents))
 
