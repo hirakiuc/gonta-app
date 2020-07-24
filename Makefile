@@ -22,5 +22,12 @@ deps:
 vendor:
 	go mod vendor
 
+build-image:
+	docker build . -t gonta:latest
+	docker tag gonta gcr.io/${GCP_PROJECT}/gonta:latest
+
+push-image:
+	docker push gcr.io/${GCP_PROJECT}/gonta:latest
+
 cloudbuild:
 	gcloud builds submit --tag gcr.io/${GCP_PROJECT}/gonta
