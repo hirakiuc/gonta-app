@@ -15,10 +15,10 @@ type Echo struct {
 	Base
 }
 
-func NewEcho(c *config.Config, logger *zap.Logger) *Echo {
+func NewEcho(c *config.HandlerConfig, logger *zap.Logger) *Echo {
 	return &Echo{
 		Base: Base{
-			config: c.HandlerConfig(),
+			config: c,
 			logger: logger,
 		},
 	}
