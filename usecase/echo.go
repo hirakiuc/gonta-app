@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/hirakiuc/gonta-app/config"
@@ -11,8 +10,6 @@ import (
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
-
-var ErrUnexpectedEventType = errors.New("unexpected event type")
 
 type Echo struct {
 	Base
@@ -27,23 +24,12 @@ func NewEcho(c *config.HandlerConfig, logger *zap.Logger) *Echo {
 	}
 }
 
-func (u *Echo) innerEvent(e *slackevents.EventsAPIEvent) *slackevents.AppMentionEvent {
-	innerEvent := e.InnerEvent
-
-	switch ev := innerEvent.Data.(type) {
-	case *slackevents.AppMentionEvent:
-		return ev
-	default:
-		return nil
-	}
-}
-
 func (u *Echo) ReceiveEvent(e *slackevents.EventsAPIEvent) error {
 	u.logger.Info("Receive event:handler-echo", zap.String("handler", "echo"))
 
-	ev := u.innerEvent(e)
-	if ev == nil {
-		return fmt.Errorf("%w", ErrUnexpectedEventType)
+	ev, err := castAppMentionEvent(e)
+	if err != nil {
+		return err
 	}
 
 	api := u.slackAPI()
