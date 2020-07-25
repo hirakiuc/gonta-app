@@ -149,6 +149,13 @@ func (s *Gonta) ServeEvents(w http.ResponseWriter, r *http.Request) {
 func (s *Gonta) ServeActions(w http.ResponseWriter, r *http.Request) {
 	log := s.log
 
+	if r.Method != http.MethodPost {
+		log.Debug("Invalid http method", zap.String("method", r.Method))
+		w.WriteHeader(http.StatusMethodNotAllowed)
+
+		return
+	}
+
 	var payload *slack.InteractionCallback
 
 	err := json.Unmarshal([]byte(r.FormValue("payload")), &payload)
