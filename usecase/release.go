@@ -42,7 +42,7 @@ func (u *Release) needToRelease(msg string) bool {
 		return false
 	}
 
-	return (strings.ToLower(words[0]) == "release")
+	return (strings.ToLower(words[1]) == "release")
 }
 
 /*
