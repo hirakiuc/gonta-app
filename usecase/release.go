@@ -177,10 +177,10 @@ func (u *Release) InvokeRelease(e *slack.InteractionCallback) error {
 		return err
 	}
 
-	// Deploy should be canceled if the version is the cancelVersion.
+	// Deploy should be cancelled if the version is the cancelVersion.
 	if version == cancelVersion {
 		msg := slack.MsgOptionText(
-			fmt.Sprintf("<@%s> Canceled!", e.User.ID),
+			fmt.Sprintf("<@%s> Cancelled!", e.User.ID),
 			false,
 		)
 
