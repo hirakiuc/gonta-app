@@ -3,6 +3,7 @@ package usecase
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hirakiuc/gonta-app/config"
 	"github.com/slack-go/slack"
@@ -14,6 +15,8 @@ import (
 const (
 	selectVersionActionID     = "select-version"
 	confirmDeploymentActionID = "confirm-release"
+
+	cancelVersion = "deny"
 )
 
 type Release struct {
@@ -130,7 +133,7 @@ func (u *Release) ConfirmRelease(e *slack.InteractionCallback) error {
 
 	denyButton := slack.NewButtonBlockElement(
 		"",
-		"deny",
+		cancelVersion,
 		slack.NewTextBlockObject(slack.PlainTextType, "Stop", false, false),
 	)
 	denyButton.WithStyle(slack.StyleDanger)
@@ -161,18 +164,66 @@ func (u *Release) InvokeRelease(e *slack.InteractionCallback) error {
 	action := e.ActionCallback.BlockActions[0]
 	version := action.Value
 
+	api := u.slackAPI()
+
+	// Remove the original message to prevent double invoking this action.
+	opt := slack.MsgOptionDeleteOriginal(e.ResponseURL)
+
+	// nolint:dogsled
+	_, _, _, err := api.SendMessage("", opt)
+	if err != nil {
+		u.logger.Error("Failed to delete the original message", zap.Error(err))
+
+		return err
+	}
+
+	// Deploy should be canceled if the version is the cancelVersion.
+	if version == cancelVersion {
+		msg := slack.MsgOptionText(
+			fmt.Sprintf("<@%s> Canceled!", e.User.ID),
+			false,
+		)
+
+		_, _, err := api.PostMessage(e.Channel.ID, msg)
+		if err != nil {
+			u.logger.Error("Failed to send a cancel message")
+
+			return err
+		}
+
+		return nil
+	}
+
 	startMsg := slack.MsgOptionText(
 		fmt.Sprintf("<@%s> OK, I'll deploy `%s`.", e.User.ID, version),
 		false,
 	)
 
-	api := u.slackAPI()
-
-	_, _, err := api.PostMessage(e.Channel.ID, startMsg)
+	_, _, err = api.PostMessage(e.Channel.ID, startMsg)
 	if err != nil {
 		u.logger.Error("Failed to send a start message", zap.Error(err))
+
 		return err
 	}
+
+	ch := make(chan error)
+
+	// Dispatch deploy process
+	go u.deploy(ch, e, version)
+
+	u.logger.Info("Waiting for the deployment", zap.String("version", version))
+
+	return <-ch
+}
+
+func (u *Release) deploy(ch chan error, e *slack.InteractionCallback, version string) {
+	// Wait the deployment
+	// nolint:gomnd
+	time.Sleep(3 * time.Second)
+
+	api := u.slackAPI()
+
+	u.logger.Info("Start deploying the version", zap.String("version", version))
 
 	// u.deploy(version)
 
@@ -181,11 +232,16 @@ func (u *Release) InvokeRelease(e *slack.InteractionCallback) error {
 		false,
 	)
 
-	_, _, err = api.PostMessage(e.Channel.ID, endMsg)
+	_, _, err := api.PostMessage(e.Channel.ID, endMsg)
 	if err != nil {
 		u.logger.Error("Failed to send a complete message", zap.Error(err))
-		return err
+
+		ch <- err
+
+		return
 	}
 
-	return nil
+	u.logger.Info("Deployed the version", zap.String("version", version))
+
+	ch <- nil
 }
