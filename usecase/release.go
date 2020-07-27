@@ -49,15 +49,21 @@ func (u *Release) needToRelease(msg string) bool {
  * app mention.
  */
 func (u *Release) ShowVersionChooser(e *slackevents.EventsAPIEvent) error {
+	u.logger.Info("ShowVersionChooser start")
+
 	ev, err := castAppMentionEvent(e)
 	if err != nil {
+		u.logger.Debug("Can't get AppMentionEvent...")
 		return err
 	}
 
 	if !u.needToRelease(ev.Text) {
+		u.logger.Debug("Release callback should not be invoked")
 		// Ignore mention event
 		return nil
 	}
+
+	u.logger.Info("Release flow start")
 
 	textSection := slack.NewSectionBlock(
 		slack.NewTextBlockObject(slack.MarkdownType, "Please select *version*.", false, false),
@@ -98,6 +104,8 @@ func (u *Release) ShowVersionChooser(e *slackevents.EventsAPIEvent) error {
 		u.logger.Error("Failed to send an ephemeral message", zap.Error(err))
 		return err
 	}
+
+	u.logger.Info("Sent a show versions message")
 
 	return nil
 }
