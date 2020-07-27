@@ -10,10 +10,6 @@ import (
 )
 
 func Configure(q *queue.Queue, conf *config.HandlerConfig, logger *zap.Logger) {
-	// Configure echo callbacks
-	echo := NewEcho(conf, logger)
-	q.AddEventCallback(slackevents.AppMention, echo.ReceiveEvent)
-
 	// Configure release callbacks
 	rel := NewRelease(conf, logger)
 
