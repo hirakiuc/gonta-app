@@ -45,8 +45,8 @@ func (q *Queue) AddEventCallback(eventType string, c EventCallback) {
 	q.events.AddCallback(eventType, c)
 }
 
-func (q *Queue) AddActionCallback(c ActionCallback) {
-	q.actions.AddCallback(c)
+func (q *Queue) AddBlockActionCallback(eventType slack.InteractionType, blockID string, c ActionCallback) {
+	q.actions.AddBlockActionCallback(eventType, blockID, c)
 }
 
 func (q *Queue) AddCommandCallback(c CommandCallback) {

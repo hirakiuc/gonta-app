@@ -3,7 +3,7 @@ TARGET := gonta
 
 default: build
 
-build:
+build: deps
 	go build -o $(TARGET) cmd/gonta/main.go
 
 run: build
@@ -22,7 +22,7 @@ deps:
 vendor:
 	go mod vendor
 
-build-image:
+build-image: check build clean
 	docker build . -t gonta:latest
 	docker tag gonta gcr.io/${GCP_PROJECT}/gonta:latest
 
