@@ -5,8 +5,9 @@ import (
 	"os"
 
 	"github.com/hirakiuc/gonta-app/config"
+	"github.com/hirakiuc/gonta-app/event/data"
+	"github.com/hirakiuc/gonta-app/event/queue"
 	"github.com/hirakiuc/gonta-app/log"
-	"github.com/hirakiuc/gonta-app/queue"
 	"github.com/hirakiuc/gonta-app/server"
 	"github.com/hirakiuc/gonta-app/usecase"
 
@@ -27,16 +28,13 @@ func main() {
 	}
 
 	q := queue.New(QueueSize, logger)
-	usecase.Configure(q, conf.HandlerConfig(), logger)
+	d := data.NewProvider()
+	usecase.Configure(q, d, conf.HandlerConfig(), logger)
 
 	go q.Start()
 
-	defer func() {
-		q.Stop()
-		q.WaitUntilFinish()
-	}()
-
-	srv := server.NewGonta(logger, conf, q)
+	srv := server.NewGonta(logger, conf, q, d)
+	defer srv.Wait()
 
 	http.HandleFunc("/serve", srv.SlackVerify(srv.ServeEvents))
 
@@ -44,6 +42,7 @@ func main() {
 	http.HandleFunc("/events", srv.SlackVerify(srv.ServeEvents))
 	http.HandleFunc("/actions", srv.SlackVerify(srv.ServeActions))
 	http.HandleFunc("/commands", srv.SlackVerify(srv.ServeCommands))
+	http.HandleFunc("/data", srv.SlackVerify(srv.ServeData))
 
 	err = http.ListenAndServe(":8082", nil)
 	if err != nil {

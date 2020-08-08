@@ -17,7 +17,7 @@
 vendor
 env.yaml
 sample.*
-./*.json
+./samples
 ./gonta
 ./.github
 ./.envrc

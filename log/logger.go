@@ -18,6 +18,7 @@ func GetLogger() *zap.Logger {
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create logger.")
+
 		return nil
 	}
 

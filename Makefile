@@ -10,7 +10,7 @@ run: build
 	go run cmd/gonta/main.go
 
 check:
-	golangci-lint run --enable-all ./...
+	golangci-lint run --enable-all --disable gci ./...
 
 clean:
 	go clean ./cmd/gonta/main.go
