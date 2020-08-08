@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hirakiuc/gonta-app/config"
+	"github.com/hirakiuc/gonta-app/event/data"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 
@@ -13,15 +14,13 @@ import (
 )
 
 const (
-	selectVersionActionID     = "select-version"
-	confirmDeploymentActionID = "confirm-release"
+	selectVersionBlockID     = "select-version"
+	confirmDeploymentBlockID = "confirm-release"
 
 	cancelVersion = "deny"
 )
 
 type Release struct {
-	log *zap.Logger
-
 	Base
 }
 
@@ -32,10 +31,6 @@ func NewRelease(c *config.HandlerConfig, logger *zap.Logger) *Release {
 			logger: logger,
 		},
 	}
-}
-
-func (u *Release) fetchVersions() ([]string, error) {
-	return []string{"v1.0.0", "v1.1.0", "v1.1.1"}, nil
 }
 
 func (u *Release) needToRelease(msg string) bool {
@@ -57,12 +52,14 @@ func (u *Release) ShowVersionChooser(e *slackevents.EventsAPIEvent) error {
 	ev, err := castAppMentionEvent(e)
 	if err != nil {
 		u.logger.Debug("Can't get AppMentionEvent...")
+
 		return err
 	}
 
 	if !u.needToRelease(ev.Text) {
 		u.logger.Debug("Release callback should not be invoked")
 		// Ignore mention event
+
 		return nil
 	}
 
@@ -74,28 +71,13 @@ func (u *Release) ShowVersionChooser(e *slackevents.EventsAPIEvent) error {
 		nil,
 	)
 
-	versions, err := u.fetchVersions()
-	if err != nil {
-		u.log.Error("Failed to fetch versions", zap.Error(err))
-		// TBD: Try to send error message to slack
-		return err
-	}
-
-	options := make([]*slack.OptionBlockObject, 0, len(versions))
-
-	for _, v := range versions {
-		optionText := slack.NewTextBlockObject(slack.PlainTextType, v, false, false)
-		options = append(options, slack.NewOptionBlockObject(v, optionText))
-	}
-
 	selectMenu := slack.NewOptionsSelectBlockElement(
-		slack.OptTypeStatic,
+		slack.OptTypeExternal,
 		slack.NewTextBlockObject(slack.PlainTextType, "Select version", false, false),
 		"",
-		options...,
 	)
 
-	actionBlock := slack.NewActionBlock(selectVersionActionID, selectMenu)
+	actionBlock := slack.NewActionBlock(selectVersionBlockID, selectMenu)
 
 	fallbackText := slack.MsgOptionText("This client is not supported.", false)
 	blocks := slack.MsgOptionBlocks(textSection, actionBlock)
@@ -105,12 +87,43 @@ func (u *Release) ShowVersionChooser(e *slackevents.EventsAPIEvent) error {
 	_, err = api.PostEphemeral(ev.Channel, ev.User, fallbackText, blocks)
 	if err != nil {
 		u.logger.Error("Failed to send an ephemeral message", zap.Error(err))
+
 		return err
 	}
 
 	u.logger.Info("Sent a show versions message")
 
 	return nil
+}
+
+func (u *Release) FetchVersions(e *data.ExternalDataRequest) ([]byte, error) {
+	text := `{
+	"options": [
+		{
+			"text": {
+				"type": "plain_text",
+				"text": "v1.0.0"
+			},
+			"value": "v1.0.0"
+		},
+		{
+			"text": {
+				"type": "plain_text",
+				"text": "v1.1.0"
+			},
+			"value": "v1.1.0"
+		},
+		{
+			"text": {
+				"type": "plain_text",
+				"text": "v1.1.1"
+			},
+			"value": "v1.1.1"
+		}
+	]
+}`
+
+	return []byte(text), nil
 }
 
 // actions.
@@ -138,7 +151,7 @@ func (u *Release) ConfirmRelease(e *slack.InteractionCallback) error {
 	)
 	denyButton.WithStyle(slack.StyleDanger)
 
-	actionBlock := slack.NewActionBlock(confirmDeploymentActionID, confirmButton, denyButton)
+	actionBlock := slack.NewActionBlock(confirmDeploymentBlockID, confirmButton, denyButton)
 
 	fallbackText := slack.MsgOptionText("This client is not supported.", false)
 	blocks := slack.MsgOptionBlocks(textSection, actionBlock)
@@ -151,6 +164,7 @@ func (u *Release) ConfirmRelease(e *slack.InteractionCallback) error {
 	_, _, _, err := api.SendMessage("", replaceOriginal, fallbackText, blocks)
 	if err != nil {
 		u.logger.Error("Failed to send a message", zap.Error(err))
+
 		return err
 	}
 

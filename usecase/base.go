@@ -4,10 +4,10 @@ import (
 	"crypto/tls"
 	"net/http"
 
-	"github.com/hirakiuc/gonta-app/config"
-
-	"github.com/slack-go/slack"
 	"go.uber.org/zap"
+
+	"github.com/hirakiuc/gonta-app/config"
+	"github.com/slack-go/slack"
 )
 
 type Base struct {

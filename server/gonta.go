@@ -10,8 +10,8 @@ import (
 	"os"
 
 	"github.com/hirakiuc/gonta-app/config"
-	"github.com/hirakiuc/gonta-app/queue"
-
+	"github.com/hirakiuc/gonta-app/event/data"
+	"github.com/hirakiuc/gonta-app/event/queue"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
@@ -24,13 +24,15 @@ type Gonta struct {
 	log    *zap.Logger
 	config *config.Config
 	queue  *queue.Queue
+	data   *data.Provider
 }
 
-func NewGonta(logger *zap.Logger, c *config.Config, q *queue.Queue) *Gonta {
+func NewGonta(logger *zap.Logger, c *config.Config, q *queue.Queue, d *data.Provider) *Gonta {
 	return &Gonta{
 		log:    logger,
 		config: c,
 		queue:  q,
+		data:   d,
 	}
 }
 
@@ -171,6 +173,56 @@ func (s *Gonta) ServeActions(w http.ResponseWriter, r *http.Request) {
 	s.queue.EnqueueAction(payload)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+/**
+ * ServeData
+ *
+ * This method will provide json data as external data source
+ *
+ * NOTE: https://api.slack.com/reference/block-kit/block-elements#external_select
+ */
+func (s *Gonta) ServeData(w http.ResponseWriter, r *http.Request) {
+	log := s.log
+
+	if r.Method != http.MethodPost {
+		log.Debug("Invalid http request", zap.String("method", r.Method))
+		w.WriteHeader(http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	// parse post parameters
+	if err := r.ParseForm(); err != nil {
+		log.Error("Failed to parse POST parameters", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+
+		return
+	}
+
+	event, err := ParseExternalDataRequest([]byte(r.FormValue("payload")))
+	if err != nil {
+		log.Error("failed to parse payload", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+
+	log.Info("Data request received", zap.String("payload", r.FormValue("payload")))
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = s.data.Process(event, w)
+	if err != nil {
+		log.Error("Failed to fetch data", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	log.Info("Finished to process a data request")
 }
 
 func (s *Gonta) ServeCommands(w http.ResponseWriter, r *http.Request) {

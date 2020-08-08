@@ -1,6 +1,8 @@
 /gonta
 env.yaml
 
+/samples
+
 # Created by https://www.gitignore.io/api/vim,go
 # Edit at https://www.gitignore.io/?templates=vim,go
 
