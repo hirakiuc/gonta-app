@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/hirakiuc/gonta-app/config"
 	"github.com/hirakiuc/gonta-app/event/data"
@@ -34,6 +35,29 @@ func NewGonta(logger *zap.Logger, c *config.Config, q *queue.Queue, d *data.Prov
 		queue:  q,
 		data:   d,
 	}
+}
+
+func (s *Gonta) Wait() {
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
+
+	go func(q *queue.Queue) {
+		q.Stop()
+		q.WaitUntilFinish()
+
+		wg.Done()
+	}(s.queue)
+
+	wg.Add(1)
+
+	go func(d *data.Provider) {
+		d.Wait()
+
+		wg.Done()
+	}(s.data)
+
+	wg.Wait()
 }
 
 // nolint:interfacer

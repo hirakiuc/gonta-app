@@ -33,12 +33,8 @@ func main() {
 
 	go q.Start()
 
-	defer func() {
-		q.Stop()
-		q.WaitUntilFinish()
-	}()
-
 	srv := server.NewGonta(logger, conf, q, d)
+	defer srv.Wait()
 
 	http.HandleFunc("/serve", srv.SlackVerify(srv.ServeEvents))
 
