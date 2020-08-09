@@ -1,4 +1,4 @@
-package usecase
+package release
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/hirakiuc/gonta-app/config"
 	"github.com/hirakiuc/gonta-app/event/data"
+	"github.com/hirakiuc/gonta-app/usecase"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 
@@ -14,21 +15,21 @@ import (
 )
 
 const (
-	selectVersionBlockID     = "select-version"
-	confirmDeploymentBlockID = "confirm-release"
+	SelectVersionBlockID     = "select-version"
+	ConfirmDeploymentBlockID = "confirm-release"
 
-	cancelVersion = "deny"
+	CancelVersion = "deny"
 )
 
 type Release struct {
-	Base
+	usecase.Base
 }
 
-func NewRelease(c *config.HandlerConfig, logger *zap.Logger) *Release {
+func New(c *config.HandlerConfig, logger *zap.Logger) *Release {
 	return &Release{
-		Base: Base{
-			config: c,
-			logger: logger,
+		Base: usecase.Base{
+			Config: c,
+			Logger: logger,
 		},
 	}
 }
@@ -47,23 +48,23 @@ func (u *Release) needToRelease(msg string) bool {
  * app mention.
  */
 func (u *Release) ShowVersionChooser(e *slackevents.EventsAPIEvent) error {
-	u.logger.Info("ShowVersionChooser start")
+	u.Logger.Info("ShowVersionChooser start")
 
-	ev, err := castAppMentionEvent(e)
+	ev, err := u.CastAppMentionEvent(e)
 	if err != nil {
-		u.logger.Debug("Can't get AppMentionEvent...")
+		u.Logger.Debug("Can't get AppMentionEvent...")
 
 		return err
 	}
 
 	if !u.needToRelease(ev.Text) {
-		u.logger.Debug("Release callback should not be invoked")
+		u.Logger.Debug("Release callback should not be invoked")
 		// Ignore mention event
 
 		return nil
 	}
 
-	u.logger.Info("Release flow start")
+	u.Logger.Info("Release flow start")
 
 	textSection := slack.NewSectionBlock(
 		slack.NewTextBlockObject(slack.MarkdownType, "Please select *version*.", false, false),
@@ -77,21 +78,21 @@ func (u *Release) ShowVersionChooser(e *slackevents.EventsAPIEvent) error {
 		"",
 	)
 
-	actionBlock := slack.NewActionBlock(selectVersionBlockID, selectMenu)
+	actionBlock := slack.NewActionBlock(SelectVersionBlockID, selectMenu)
 
 	fallbackText := slack.MsgOptionText("This client is not supported.", false)
 	blocks := slack.MsgOptionBlocks(textSection, actionBlock)
 
-	api := u.slackAPI()
+	api := u.SlackAPI()
 
 	_, err = api.PostEphemeral(ev.Channel, ev.User, fallbackText, blocks)
 	if err != nil {
-		u.logger.Error("Failed to send an ephemeral message", zap.Error(err))
+		u.Logger.Error("Failed to send an ephemeral message", zap.Error(err))
 
 		return err
 	}
 
-	u.logger.Info("Sent a show versions message")
+	u.Logger.Info("Sent a show versions message")
 
 	return nil
 }
@@ -146,24 +147,24 @@ func (u *Release) ConfirmRelease(e *slack.InteractionCallback) error {
 
 	denyButton := slack.NewButtonBlockElement(
 		"",
-		cancelVersion,
+		CancelVersion,
 		slack.NewTextBlockObject(slack.PlainTextType, "Stop", false, false),
 	)
 	denyButton.WithStyle(slack.StyleDanger)
 
-	actionBlock := slack.NewActionBlock(confirmDeploymentBlockID, confirmButton, denyButton)
+	actionBlock := slack.NewActionBlock(ConfirmDeploymentBlockID, confirmButton, denyButton)
 
 	fallbackText := slack.MsgOptionText("This client is not supported.", false)
 	blocks := slack.MsgOptionBlocks(textSection, actionBlock)
 
 	replaceOriginal := slack.MsgOptionReplaceOriginal(e.ResponseURL)
 
-	api := u.slackAPI()
+	api := u.SlackAPI()
 
 	// nolint:dogsled
 	_, _, _, err := api.SendMessage("", replaceOriginal, fallbackText, blocks)
 	if err != nil {
-		u.logger.Error("Failed to send a message", zap.Error(err))
+		u.Logger.Error("Failed to send a message", zap.Error(err))
 
 		return err
 	}
@@ -178,7 +179,7 @@ func (u *Release) InvokeRelease(e *slack.InteractionCallback) error {
 	action := e.ActionCallback.BlockActions[0]
 	version := action.Value
 
-	api := u.slackAPI()
+	api := u.SlackAPI()
 
 	// Remove the original message to prevent double invoking this action.
 	opt := slack.MsgOptionDeleteOriginal(e.ResponseURL)
@@ -186,13 +187,13 @@ func (u *Release) InvokeRelease(e *slack.InteractionCallback) error {
 	// nolint:dogsled
 	_, _, _, err := api.SendMessage("", opt)
 	if err != nil {
-		u.logger.Error("Failed to delete the original message", zap.Error(err))
+		u.Logger.Error("Failed to delete the original message", zap.Error(err))
 
 		return err
 	}
 
 	// Deploy should be cancelled if the version is the cancelVersion.
-	if version == cancelVersion {
+	if version == CancelVersion {
 		msg := slack.MsgOptionText(
 			fmt.Sprintf("<@%s> Cancelled!", e.User.ID),
 			false,
@@ -200,7 +201,7 @@ func (u *Release) InvokeRelease(e *slack.InteractionCallback) error {
 
 		_, _, err := api.PostMessage(e.Channel.ID, msg)
 		if err != nil {
-			u.logger.Error("Failed to send a cancel message")
+			u.Logger.Error("Failed to send a cancel message")
 
 			return err
 		}
@@ -215,7 +216,7 @@ func (u *Release) InvokeRelease(e *slack.InteractionCallback) error {
 
 	_, _, err = api.PostMessage(e.Channel.ID, startMsg)
 	if err != nil {
-		u.logger.Error("Failed to send a start message", zap.Error(err))
+		u.Logger.Error("Failed to send a start message", zap.Error(err))
 
 		return err
 	}
@@ -225,7 +226,7 @@ func (u *Release) InvokeRelease(e *slack.InteractionCallback) error {
 	// Dispatch deploy process
 	go u.deploy(ch, e, version)
 
-	u.logger.Info("Waiting for the deployment", zap.String("version", version))
+	u.Logger.Info("Waiting for the deployment", zap.String("version", version))
 
 	return <-ch
 }
@@ -235,9 +236,9 @@ func (u *Release) deploy(ch chan error, e *slack.InteractionCallback, version st
 	// nolint:gomnd
 	time.Sleep(3 * time.Second)
 
-	api := u.slackAPI()
+	api := u.SlackAPI()
 
-	u.logger.Info("Start deploying the version", zap.String("version", version))
+	u.Logger.Info("Start deploying the version", zap.String("version", version))
 
 	// u.deploy(version)
 
@@ -248,14 +249,14 @@ func (u *Release) deploy(ch chan error, e *slack.InteractionCallback, version st
 
 	_, _, err := api.PostMessage(e.Channel.ID, endMsg)
 	if err != nil {
-		u.logger.Error("Failed to send a complete message", zap.Error(err))
+		u.Logger.Error("Failed to send a complete message", zap.Error(err))
 
 		ch <- err
 
 		return
 	}
 
-	u.logger.Info("Deployed the version", zap.String("version", version))
+	u.Logger.Info("Deployed the version", zap.String("version", version))
 
 	ch <- nil
 }
