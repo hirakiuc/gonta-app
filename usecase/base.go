@@ -69,7 +69,8 @@ func findWordInArray(ary []string, word string) (int, bool) {
 /*
  * Extract the origin word from auto-linked text by slack.
  *
- * NOTE: extract the text from link markdown, "select-version:<http://github.com/gonta-app|github.com/gonta-app>"
+ * NOTE: extract the text("github.com/gonta-app") from link
+ * markdown("<http://github.com/gonta-app|github.com/gonta-app>")
  */
 func (b *Base) parseAutoLinkWord(text string) string {
 	if !strings.HasPrefix(text, "<http://") || !strings.HasSuffix(text, ">") {
