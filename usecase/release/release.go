@@ -87,7 +87,7 @@ func (u *Release) Start(e *slackevents.EventsAPIEvent) error {
 		// @gonta release [repo] [version]
 		c := NewConfirm(u)
 
-		return c.Confirm(cmd.Args[0], cmd.Args[1])
+		return c.Confirm(ev.Channel, cmd.Args[0], cmd.Args[1])
 
 	default:
 		// @gonta release A B C....

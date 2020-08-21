@@ -19,14 +19,14 @@ func NewConfirm(u *Release) *Confirm {
 }
 
 func (c *Confirm) ConfirmFromCallback(e *slack.InteractionCallback, repo string, version string) error {
-	return c.showConfirm(repo, version, e.ResponseURL)
+	return c.showConfirm(e.Channel.ID, repo, version, e.ResponseURL)
 }
 
-func (c *Confirm) Confirm(repo string, version string) error {
-	return c.showConfirm(repo, version, "")
+func (c *Confirm) Confirm(channelID string, repo string, version string) error {
+	return c.showConfirm(channelID, repo, version, "")
 }
 
-func (c *Confirm) showConfirm(repo string, version string, responseURL string) error {
+func (c *Confirm) showConfirm(channelID string, repo string, version string, responseURL string) error {
 	msg := fmt.Sprintf("We're goging to deploy version `%s` of `%s`.\nAre you sure?", version, repo)
 	textSection := slack.NewSectionBlock(
 		slack.NewTextBlockObject(slack.MarkdownType, msg, false, false),
@@ -67,7 +67,7 @@ func (c *Confirm) showConfirm(repo string, version string, responseURL string) e
 	api := c.SlackAPI()
 
 	// nolint:dogsled
-	_, _, _, err := api.SendMessage("", opts...)
+	_, _, _, err := api.SendMessage(channelID, opts...)
 	if err != nil {
 		c.Logger.Error("Failed to send a message", zap.Error(err))
 
