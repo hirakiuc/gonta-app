@@ -1,16 +1,15 @@
 package release
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hirakiuc/gonta-app/config"
 	"github.com/hirakiuc/gonta-app/event/data"
 	"github.com/hirakiuc/gonta-app/usecase"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
-
 	"go.uber.org/zap"
 )
 
@@ -18,7 +17,10 @@ const (
 	SelectVersionBlockID     = "select-version"
 	ConfirmDeploymentBlockID = "confirm-release"
 
-	CancelVersion = "deny"
+	VersionChooserActionID = "select-version"
+	CancelVersion          = "deny"
+
+	SubCommandHelp = "help"
 )
 
 type Release struct {
@@ -34,142 +36,136 @@ func New(c *config.HandlerConfig, logger *zap.Logger) *Release {
 	}
 }
 
-func (u *Release) needToRelease(msg string) bool {
-	words := strings.Split(strings.TrimSpace(msg), " ")
-
-	if len(words) == 0 {
-		return false
-	}
-
-	return (strings.ToLower(words[1]) == "release")
-}
-
-/*
- * app mention.
- */
-func (u *Release) ShowVersionChooser(e *slackevents.EventsAPIEvent) error {
-	u.Logger.Info("ShowVersionChooser start")
+func (u *Release) Start(e *slackevents.EventsAPIEvent) error {
+	u.Logger.Info("Invoke release flow.")
 
 	ev, err := u.CastAppMentionEvent(e)
 	if err != nil {
-		u.Logger.Debug("Can't get AppMentionEvent...")
+		u.Logger.Error("Can't get AppMentionEvent...", zap.Error(err))
 
 		return err
 	}
 
-	if !u.needToRelease(ev.Text) {
-		u.Logger.Debug("Release callback should not be invoked")
-		// Ignore mention event
+	cmd := u.ParseAsCommand(ev.Text, "release")
+	if cmd == nil {
+		u.Logger.Debug("Ignroe this event")
 
 		return nil
 	}
 
-	u.Logger.Info("Release flow start")
+	// Usage:
+	// 1. @gonta release
+	//   -> show usage
+	// 2. @gonta release help
+	//   -> show usage
+	// 3. @gonta release [repo]
+	//   -> confirm the repo & fetch tags
+	// 4. @gonta release [repo] [version]
+	//   -> confirm the repo & version & deploy
 
-	textSection := slack.NewSectionBlock(
-		slack.NewTextBlockObject(slack.MarkdownType, "Please select *version*.", false, false),
-		nil,
-		nil,
-	)
+	switch len(cmd.Args) {
+	case 0:
+		// @gonta release
+		h := NewHelp(u)
 
-	selectMenu := slack.NewOptionsSelectBlockElement(
-		slack.OptTypeExternal,
-		slack.NewTextBlockObject(slack.PlainTextType, "Select version", false, false),
-		"",
-	)
+		return h.Show(ev)
 
-	actionBlock := slack.NewActionBlock(SelectVersionBlockID, selectMenu)
+	case 1:
+		if cmd.Args[0] == SubCommandHelp {
+			// @gonta release help
+			h := NewHelp(u)
 
-	fallbackText := slack.MsgOptionText("This client is not supported.", false)
-	blocks := slack.MsgOptionBlocks(textSection, actionBlock)
+			return h.Show(ev)
+		}
 
-	api := u.SlackAPI()
+		// @gonta release [repo]
+		v := NewVersionChooser(u)
 
-	_, err = api.PostEphemeral(ev.Channel, ev.User, fallbackText, blocks)
-	if err != nil {
-		u.Logger.Error("Failed to send an ephemeral message", zap.Error(err))
+		return v.Show(ev, cmd.Args[0])
 
-		return err
+	case 2: // nolint:gomnd
+		// @gonta release [repo] [version]
+		c := NewConfirm(u)
+
+		return c.Confirm(cmd.Args[0], cmd.Args[1])
+
+	default:
+		// @gonta release A B C....
+		h := NewHelp(u)
+
+		return h.Show(ev)
+	}
+}
+
+// This actionID will be used in version chooser.
+func actionIDWithRepo(repo string) string {
+	return fmt.Sprintf("%s:%s", VersionChooserActionID, repo)
+}
+
+// This method is used in External Data Fetcher to get the repository name from the ActionID.
+func parseActionID(actionID string) string {
+	if !strings.HasPrefix(actionID, VersionChooserActionID+":") {
+		return ""
 	}
 
-	u.Logger.Info("Sent a show versions message")
+	pos := len(VersionChooserActionID + ":")
 
-	return nil
+	return actionID[pos:]
+}
+
+// Parse actionID and extract repo.
+func parseSelectedVersion(actionID string) (string, string) {
+	parts := strings.Split(actionID, ":")
+
+	repo := parts[0]
+	version := strings.Join(parts[1:], ":")
+
+	return repo, version
 }
 
 func (u *Release) FetchVersions(e *data.ExternalDataRequest) ([]byte, error) {
-	text := `{
-	"options": [
-		{
-			"text": {
-				"type": "plain_text",
-				"text": "v1.0.0"
-			},
-			"value": "v1.0.0"
-		},
-		{
-			"text": {
-				"type": "plain_text",
-				"text": "v1.1.0"
-			},
-			"value": "v1.1.0"
-		},
-		{
-			"text": {
-				"type": "plain_text",
-				"text": "v1.1.1"
-			},
-			"value": "v1.1.1"
-		}
-	]
-}`
+	repo := parseActionID(e.ActionID)
+	if len(repo) == 0 {
+		u.Logger.Debug("No repo found from the actionID", zap.String("actionID", e.ActionID))
 
-	return []byte(text), nil
+		return []byte(`{"options":[]}`), nil
+	}
+
+	u.Logger.Debug(
+		"Repository",
+		zap.String("ActionID", e.ActionID),
+		zap.String("repo", repo),
+	)
+
+	// nolint:godox // implement this
+	// TODO Fetch versions
+	versions := []string{"v1.0.0", "v1.1.0", "v1.1.1"}
+
+	options := data.NewOptions()
+	options.AddVersionsWithRepo(repo, versions)
+
+	bytes, err := json.Marshal(options)
+	if err != nil {
+		u.Logger.Error("Failed to generate json", zap.Error(err))
+
+		return []byte(`{"options":[]}`), err
+	}
+
+	u.Logger.Debug("response", zap.String("json", string(bytes)))
+
+	return bytes, nil
 }
 
 // actions.
 func (u *Release) ConfirmRelease(e *slack.InteractionCallback) error {
 	action := e.ActionCallback.BlockActions[0]
-	version := action.SelectedOption.Value
+	value := action.SelectedOption.Value
 
-	textSection := slack.NewSectionBlock(
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("Could I deploy `%s`", version), false, false),
-		nil,
-		nil,
-	)
+	repo, version := parseSelectedVersion(value)
 
-	confirmButton := slack.NewButtonBlockElement(
-		"",
-		version,
-		slack.NewTextBlockObject(slack.PlainTextType, "OK!", false, false),
-	)
-	confirmButton.WithStyle(slack.StylePrimary)
+	c := NewConfirm(u)
 
-	denyButton := slack.NewButtonBlockElement(
-		"",
-		CancelVersion,
-		slack.NewTextBlockObject(slack.PlainTextType, "Stop", false, false),
-	)
-	denyButton.WithStyle(slack.StyleDanger)
-
-	actionBlock := slack.NewActionBlock(ConfirmDeploymentBlockID, confirmButton, denyButton)
-
-	fallbackText := slack.MsgOptionText("This client is not supported.", false)
-	blocks := slack.MsgOptionBlocks(textSection, actionBlock)
-
-	replaceOriginal := slack.MsgOptionReplaceOriginal(e.ResponseURL)
-
-	api := u.SlackAPI()
-
-	// nolint:dogsled
-	_, _, _, err := api.SendMessage("", replaceOriginal, fallbackText, blocks)
-	if err != nil {
-		u.Logger.Error("Failed to send a message", zap.Error(err))
-
-		return err
-	}
-
-	return nil
+	return c.ConfirmFromCallback(e, repo, version)
 }
 
 /*
@@ -177,86 +173,12 @@ func (u *Release) ConfirmRelease(e *slack.InteractionCallback) error {
  */
 func (u *Release) InvokeRelease(e *slack.InteractionCallback) error {
 	action := e.ActionCallback.BlockActions[0]
+
+	repo := parseActionID(action.ActionID)
+
 	version := action.Value
 
-	api := u.SlackAPI()
+	d := NewDeploy(u, repo, version)
 
-	// Remove the original message to prevent double invoking this action.
-	opt := slack.MsgOptionDeleteOriginal(e.ResponseURL)
-
-	// nolint:dogsled
-	_, _, _, err := api.SendMessage("", opt)
-	if err != nil {
-		u.Logger.Error("Failed to delete the original message", zap.Error(err))
-
-		return err
-	}
-
-	// Deploy should be cancelled if the version is the cancelVersion.
-	if version == CancelVersion {
-		msg := slack.MsgOptionText(
-			fmt.Sprintf("<@%s> Cancelled!", e.User.ID),
-			false,
-		)
-
-		_, _, err := api.PostMessage(e.Channel.ID, msg)
-		if err != nil {
-			u.Logger.Error("Failed to send a cancel message")
-
-			return err
-		}
-
-		return nil
-	}
-
-	startMsg := slack.MsgOptionText(
-		fmt.Sprintf("<@%s> OK, I'll deploy `%s`.", e.User.ID, version),
-		false,
-	)
-
-	_, _, err = api.PostMessage(e.Channel.ID, startMsg)
-	if err != nil {
-		u.Logger.Error("Failed to send a start message", zap.Error(err))
-
-		return err
-	}
-
-	ch := make(chan error)
-
-	// Dispatch deploy process
-	go u.deploy(ch, e, version)
-
-	u.Logger.Info("Waiting for the deployment", zap.String("version", version))
-
-	return <-ch
-}
-
-func (u *Release) deploy(ch chan error, e *slack.InteractionCallback, version string) {
-	// Wait the deployment
-	// nolint:gomnd
-	time.Sleep(3 * time.Second)
-
-	api := u.SlackAPI()
-
-	u.Logger.Info("Start deploying the version", zap.String("version", version))
-
-	// u.deploy(version)
-
-	endMsg := slack.MsgOptionText(
-		fmt.Sprintf("`%s` deployed", version),
-		false,
-	)
-
-	_, _, err := api.PostMessage(e.Channel.ID, endMsg)
-	if err != nil {
-		u.Logger.Error("Failed to send a complete message", zap.Error(err))
-
-		ch <- err
-
-		return
-	}
-
-	u.Logger.Info("Deployed the version", zap.String("version", version))
-
-	ch <- nil
+	return d.Start(e)
 }

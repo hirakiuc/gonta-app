@@ -1,6 +1,8 @@
 package data
 
 import (
+	"fmt"
+
 	"github.com/slack-go/slack"
 )
 
@@ -18,9 +20,29 @@ type ExternalDataRequest struct {
 }
 
 type Options struct {
-	Options        []*Element `json:"option"`
-	InitialOption  *Element   `json:"initial_option,omitempty"`
-	MinQueryLength int64      `json:"min_query_length"` // default:3
+	Options       []*Option `json:"options"`
+	InitialOption *Option   `json:"initial_option,omitempty"`
+}
+
+func NewOptions() *Options {
+	return &Options{
+		Options:       []*Option{},
+		InitialOption: nil,
+	}
+}
+
+func (o *Options) AddVersionsWithRepo(repo string, versions []string) {
+	for _, version := range versions {
+		v := fmt.Sprintf("%s:%s", repo, version)
+
+		o.AddOption(v, v)
+	}
+}
+
+func (o *Options) AddOption(text string, value string) {
+	opt := NewOption(text, value)
+
+	o.Options = append(o.Options, opt)
 }
 
 type OptionGroups struct {
@@ -31,8 +53,22 @@ type OptionGroups struct {
  *
  * NOTE: https://api.slack.com/reference/block-kit/block-elements#external_select
  */
-type Element struct {
-	Text        string                 `json:"type"`
-	Placeholder *slack.TextBlockObject `json:"placeholder"`
-	ActionID    string                 `json:"action_id"`
+type Option struct {
+	Text  *TextObject `json:"text"`
+	Value string      `json:"value"`
+}
+
+type TextObject struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+func NewOption(text string, v string) *Option {
+	return &Option{
+		Text: &TextObject{
+			Type: slack.PlainTextType,
+			Text: text,
+		},
+		Value: v,
+	}
 }

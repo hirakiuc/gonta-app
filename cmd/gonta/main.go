@@ -12,7 +12,6 @@ import (
 	"github.com/hirakiuc/gonta-app/usecase/release"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
-
 	"go.uber.org/zap"
 )
 
@@ -22,9 +21,9 @@ func configure(q *queue.Queue, d *data.Provider, conf *config.HandlerConfig, log
 	// Configure release callbacks
 	rel := release.New(conf, logger)
 
-	d.AddProvider(release.SelectVersionBlockID, rel.FetchVersions)
+	q.AddEventCallback(slackevents.AppMention, rel.Start)
 
-	q.AddEventCallback(slackevents.AppMention, rel.ShowVersionChooser)
+	d.AddProvider(release.SelectVersionBlockID, rel.FetchVersions)
 
 	q.AddBlockActionCallback(
 		slack.InteractionTypeBlockActions,

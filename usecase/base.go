@@ -66,6 +66,32 @@ func findWordInArray(ary []string, word string) (int, bool) {
 	return 0, false
 }
 
+/*
+ * Extract the origin word from auto-linked text by slack.
+ *
+ * NOTE: extract the text from link markdown, "select-version:<http://github.com/gonta-app|github.com/gonta-app>"
+ */
+func (b *Base) parseAutoLinkWord(text string) string {
+	if !strings.HasPrefix(text, "<http://") || !strings.HasSuffix(text, ">") {
+		return text
+	}
+
+	if 0 > strings.Index(text, "|") {
+		return text
+	}
+
+	pos := strings.Index(text, "|")
+
+	start := pos + 1
+	end := len(text) - 1
+
+	if start >= end {
+		return text
+	}
+
+	return text[start:end]
+}
+
 func (b *Base) ParseAsCommand(text string, startFrom string) *Command {
 	parts := strings.Split(text, Separator)
 
@@ -87,13 +113,17 @@ func (b *Base) ParseAsCommand(text string, startFrom string) *Command {
 
 	words := values[pos:]
 
-	// Ignore 1st word ( slash comnmand or mention )
-	if len(words[1:]) == 0 {
+	if len(words) == 0 {
 		return nil
 	}
 
+	args := make([]string, len(words[1:]))
+	for i, v := range words[1:] {
+		args[i] = b.parseAutoLinkWord(v)
+	}
+
 	return &Command{
-		Name: words[1],
-		Args: words[2:],
+		Name: words[0],
+		Args: args,
 	}
 }
