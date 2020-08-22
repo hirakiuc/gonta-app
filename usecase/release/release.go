@@ -21,6 +21,8 @@ const (
 	CancelVersion          = "deny"
 
 	SubCommandHelp = "help"
+
+	MinQueryLength = 2
 )
 
 type Release struct {
@@ -137,9 +139,15 @@ func (u *Release) FetchVersions(e *data.ExternalDataRequest) ([]byte, error) {
 		zap.String("repo", repo),
 	)
 
-	// nolint:godox // implement this
-	// TODO Fetch versions
-	versions := []string{"v1.0.0", "v1.1.0", "v1.1.1"}
+	// Fetch versions
+	f := NewVersionFetcher(u)
+
+	versions, err := f.Fetch(repo, e.Value)
+	if err != nil {
+		u.Logger.Error("Failed to fetch versions", zap.Error(err))
+
+		return []byte(`{"options":[]}`), err
+	}
 
 	options := data.NewOptions()
 	options.AddVersionsWithRepo(repo, versions)

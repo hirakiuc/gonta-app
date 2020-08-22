@@ -39,6 +39,9 @@ func (v *VersionChooser) Show(e *slackevents.AppMentionEvent, repo string) error
 		actionID,
 	)
 
+	queryLength := MinQueryLength
+	selectMenu.MinQueryLength = &queryLength
+
 	actionBlock := slack.NewActionBlock(SelectVersionBlockID, selectMenu)
 
 	fallbackText := slack.MsgOptionText("This client is not supported.", false)
