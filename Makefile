@@ -10,7 +10,7 @@ run: build
 	go run cmd/gonta/main.go
 
 check:
-	golangci-lint run --enable-all --disable gci ./...
+	golangci-lint run --enable-all --disable gci,testpackage ./...
 
 clean:
 	go clean ./cmd/gonta/main.go
@@ -18,6 +18,9 @@ clean:
 
 deps:
 	go mod download
+
+test:
+	go test -cover ./...
 
 vendor:
 	go mod vendor

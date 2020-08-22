@@ -9,12 +9,34 @@ import (
 	"github.com/hirakiuc/gonta-app/event/queue"
 	"github.com/hirakiuc/gonta-app/log"
 	"github.com/hirakiuc/gonta-app/server"
-	"github.com/hirakiuc/gonta-app/usecase"
-
+	"github.com/hirakiuc/gonta-app/usecase/release"
+	"github.com/slack-go/slack"
+	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
 
 const QueueSize = 50
+
+func configure(q *queue.Queue, d *data.Provider, conf *config.HandlerConfig, logger *zap.Logger) {
+	// Configure release callbacks
+	rel := release.New(conf, logger)
+
+	q.AddEventCallback(slackevents.AppMention, rel.Start)
+
+	d.AddProvider(release.SelectVersionBlockID, rel.FetchVersions)
+
+	q.AddBlockActionCallback(
+		slack.InteractionTypeBlockActions,
+		release.SelectVersionBlockID,
+		rel.ConfirmRelease,
+	)
+
+	q.AddBlockActionCallback(
+		slack.InteractionTypeBlockActions,
+		release.ConfirmDeploymentBlockID,
+		rel.InvokeRelease,
+	)
+}
 
 func main() {
 	logger := log.GetLogger()
@@ -29,7 +51,7 @@ func main() {
 
 	q := queue.New(QueueSize, logger)
 	d := data.NewProvider()
-	usecase.Configure(q, d, conf.HandlerConfig(), logger)
+	configure(q, d, conf.HandlerConfig(), logger)
 
 	go q.Start()
 

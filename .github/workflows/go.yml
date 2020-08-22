@@ -19,25 +19,28 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
-    - name: Get dependencies
-      run: |
-        go mod download
-        go mod vendor
-
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v1
       with:
         # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-        version: v1.27
+        version: v1.30
 
         # Optional: working directory, useful for monorepos
         # working-directory: somedir
 
         # Optional: golangci-lint command line arguments.
-        args: --enable-all ./...
+        args: --enable-all --disable gci,testpackage ./...
 
         # Optional: show only new issues if it's a pull request. The default value is `false`.
         only-new-issues: true
 
+    - name: Get dependencies
+      run: |
+        go mod download
+        go mod vendor
+
     - name: Build
       run: make build
+
+    - name: Test
+      run: make test
