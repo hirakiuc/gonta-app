@@ -58,12 +58,18 @@ func main() {
 	srv := server.NewGonta(logger, conf, q, d)
 	defer srv.Wait()
 
-	http.HandleFunc("/serve", srv.SlackVerify(srv.ServeEvents))
-
 	http.HandleFunc("/health", srv.ServeHealth)
+
+	// Endpoint for Event Subscriptions
 	http.HandleFunc("/events", srv.SlackVerify(srv.ServeEvents))
+
+	// Endpoint for Interactivity
 	http.HandleFunc("/actions", srv.SlackVerify(srv.ServeActions))
+
+	// Endpoint for the slash Commands
 	http.HandleFunc("/commands", srv.SlackVerify(srv.ServeCommands))
+
+	// Endpoint for the external data feature of the select menus.
 	http.HandleFunc("/data", srv.SlackVerify(srv.ServeData))
 
 	err = http.ListenAndServe(":8082", nil)
