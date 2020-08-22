@@ -25,11 +25,11 @@ test:
 vendor:
 	go mod vendor
 
-build-image: check build clean
+image\:build: check build clean
 	docker build . -t gonta:latest
 	docker tag gonta gcr.io/${GCP_PROJECT}/gonta:latest
 
-push-image:
+image\:push:
 	docker push gcr.io/${GCP_PROJECT}/gonta:latest
 
 cloudbuild:
